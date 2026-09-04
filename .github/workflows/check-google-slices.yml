@@ -75,12 +75,14 @@ jobs:
           meta['totalCodepoints'] = len(new_cps)
           meta_path.write_text(json.dumps(meta, indent=2), encoding='utf-8')
 
-          summary = f'''### Google Traditional Chinese Slicing Update
-- **Old Commit**: \`{old_commit}\`
-- **New Commit**: \`{latest_sha}\`
-- **Subsets**: {len(old_slices)} -> {len(new_slices)}
-- **Total Codepoints**: {len(old_cps)} -> {len(new_cps)} (+{added}, -{removed})
-'''
+          summary = "\n".join([
+              "### Google Traditional Chinese Slicing Update",
+              f"- **Old Commit**: `{old_commit}`",
+              f"- **New Commit**: `{latest_sha}`",
+              f"- **Subsets**: {len(old_slices)} -> {len(new_slices)}",
+              f"- **Total Codepoints**: {len(old_cps)} -> {len(new_cps)} (+{added}, -{removed})",
+              "",
+          ])
           with open('PR_BODY.md', 'w') as f:
               f.write(summary)
           with open('CHANGED.txt', 'w') as f:

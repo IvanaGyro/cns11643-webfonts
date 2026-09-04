@@ -166,14 +166,16 @@ jobs:
         with:
           script: |
             const issueTitle = `Automated CNS11643 update failed: ${{ steps.upstream_check.outputs.version || 'unknown' }}`;
-            const issueBody = `### Automated Upstream Release Run Failed
-
-- **Upstream Version**: \`${{ steps.upstream_check.outputs.version || 'unknown' }}\`
-- **Workflow Run**: [View Run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
-- **Event**: ${context.eventName}
-- **Timestamp**: ${new Date().toISOString()}
-
-Please inspect the run logs for details regarding validation, regression gates, or network failures.`;
+            const issueBody = [
+              '### Automated Upstream Release Run Failed',
+              '',
+              `- **Upstream Version**: \`${{ steps.upstream_check.outputs.version || 'unknown' }}\``,
+              `- **Workflow Run**: [View Run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+              `- **Event**: ${context.eventName}`,
+              `- **Timestamp**: ${new Date().toISOString()}`,
+              '',
+              'Please inspect the run logs for details regarding validation, regression gates, or network failures.'
+            ].join('\n');
 
             const issues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
