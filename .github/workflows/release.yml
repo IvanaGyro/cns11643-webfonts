@@ -89,11 +89,11 @@ jobs:
 
       - name: Download official font archives
         run: |
-          pixi run cns-webfont download --output-dir sources
+          pixi run python -m cns_webfont.cli download --output-dir sources
 
       - name: Build TW-Sung and TW-Kai packages
         run: |
-          pixi run cns-webfont build-all \
+          pixi run python -m cns_webfont.cli build-all \
             --sources-dir sources \
             --output-dir packages \
             --upstream-version ${{ steps.upstream_check.outputs.version }} \
@@ -102,8 +102,8 @@ jobs:
 
       - name: Validate built packages
         run: |
-          pixi run cns-webfont validate packages/tw-sung
-          pixi run cns-webfont validate packages/tw-kai
+          pixi run python -m cns_webfont.cli validate packages/tw-sung
+          pixi run python -m cns_webfont.cli validate packages/tw-kai
 
       - name: Package size guard (npm pack dry-run)
         run: |

@@ -44,8 +44,8 @@ workspace.platforms = [
   "win-arm64",
 ]
 dependencies.python = ">=3.11"
-tasks.build = "cns-webfont build-all"
-tasks.check-upstream = "cns-webfont check-upstream"
+tasks.build = "python -m cns_webfont.cli build-all"
+tasks.check-upstream = "python -m cns_webfont.cli check-upstream"
 tasks.format = "ruff check --fix . && ruff format . && pyproject-fmt pyproject.toml"
 tasks.lint = "ruff check . && ruff format --check . && pyproject-fmt --check pyproject.toml"
 tasks.test = "pytest"
