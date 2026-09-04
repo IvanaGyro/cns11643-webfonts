@@ -1,0 +1,73 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = [
+  "hatchling",
+]
+
+[project]
+name = "cns-webfont"
+version = "0.1.0"
+description = "CNS11643 Web Font CDN Builder and Distribution Tool"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+  "brotli>=1.1.0",
+  "click>=8.1.7",
+  "fonttools[woff]>=4.43.0",
+  "requests>=2.31.0",
+]
+optional-dependencies.dev = [
+  "pre-commit>=3.7.0",
+  "pyproject-fmt>=2.5.0",
+  "pytest>=8.0.0",
+  "pytest-mock>=3.12.0",
+  "ruff>=0.9.0",
+]
+scripts.cns-webfont = "cns_webfont.cli:main"
+
+[tool.pixi]
+workspace.channels = [
+  "conda-forge",
+]
+workspace.platforms = [
+  "linux-64",
+  "linux-aarch64",
+  "osx-arm64",
+  "win-64",
+  "win-arm64",
+]
+dependencies.python = ">=3.11"
+tasks.build = "cns-webfont build-all"
+tasks.check-upstream = "cns-webfont check-upstream"
+tasks.format = "ruff check --fix . && ruff format . && pyproject-fmt pyproject.toml"
+tasks.lint = "ruff check . && ruff format --check . && pyproject-fmt --check pyproject.toml"
+tasks.test = "pytest"
+environments.default = { features = [ "dev" ] }
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = [
+  ".run_temp.py",
+  "browser-tests",
+  "build",
+  "dist",
+]
+lint.select = [
+  "E",
+  "F",
+  "I",
+  "W",
+]
+
+[tool.pyproject-fmt]
+indent = 2
+keep_full_version = true
+max_supported_python = "3.14"

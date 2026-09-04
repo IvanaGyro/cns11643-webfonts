@@ -1,0 +1,35 @@
+# Pixi and virtual environments
+.pixi/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+
+# Scratch files
+.run_temp.py
+
+# Build and distribution artifacts
+build/
+dist/
+*.egg-info/
+
+# Generated font binaries and sources (must never be committed)
+*.woff2
+*.ttf
+*.zip
+*.tar.gz
+*.tgz
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.playwright/
+test-results/
+playwright-report/
+
+# OS files
+.DS_Store
+Thumbs.db
