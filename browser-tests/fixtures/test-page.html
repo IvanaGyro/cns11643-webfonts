@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>CNS11643 Web Font Browser Test</title>
+  <link rel="stylesheet" href="../../packages/tw-sung/tw-sung.css">
+  <style>
+    body {
+      font-family: "TW-Sung", serif;
+      font-size: 24px;
+      line-height: 1.6;
+      padding: 20px;
+    }
+    .sample-box {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>CNS11643 Web Font Browser Test Page</h1>
+
+  <!-- Common Traditional Chinese text (Google TC slice) -->
+  <div id="common-text" class="sample-box">
+    台灣繁體中文測試，全字庫正宋體網頁字型。
+  </div>
+
+  <!-- Rare character dynamic container -->
+  <div id="rare-container" class="sample-box">
+    <!-- Populated by test script -->
+  </div>
+</body>
+</html>
