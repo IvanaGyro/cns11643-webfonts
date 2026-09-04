@@ -10,6 +10,9 @@ permissions:
   contents: write
   pull-requests: write
 
+env:
+  PYTHONPATH: src
+
 jobs:
   check-slices:
     name: Check googlefonts/nam-files for TC Slicing Updates

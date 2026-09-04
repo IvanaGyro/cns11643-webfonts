@@ -22,6 +22,7 @@ permissions:
   issues: write
 
 env:
+  PYTHONPATH: src
   NPM_SCPOE: ${{ secrets.NPM_SCPOE || vars.NPM_SCPOE || '' }}
   NPM_SCOPE: ${{ secrets.NPM_SCOPE || vars.NPM_SCOPE || secrets.NPM_SCPOE || vars.NPM_SCPOE || '@cns11643' }}
 
