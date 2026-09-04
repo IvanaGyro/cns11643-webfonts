@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CNS11643 Web Font CDN — Interactive Demo</title>
+  <!-- Link to generated CSS packages (or jsDelivr in production) -->
+  <link rel="stylesheet" href="../packages/tw-sung/tw-sung.css" id="sung-css">
+  <link rel="stylesheet" href="../packages/tw-kai/tw-kai.css" id="kai-css">
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --code-bg: #0f172a;
+      --code-text: #f8fafc;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.5rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: #e0e7ff;
+      color: #3730a3;
+      border-radius: 4px;
+      margin-left: 0.5rem;
+    }
+
+    .notice-box {
+      background: #eff6ff;
+      border-left: 4px solid var(--primary);
+      padding: 1rem;
+      border-radius: 4px;
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+
+    .controls {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-group {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--card-bg);
+    }
+
+    .btn-group button {
+      background: transparent;
+      border: none;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+
+    .btn-group button.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .card h2 {
+      font-size: 1.15rem;
+      margin-bottom: 1rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .font-preview {
+      font-size: 1.75rem;
+      line-height: 1.8;
+      min-height: 80px;
+      outline: none;
+      padding: 0.5rem;
+      border-radius: 4px;
+      background: #fdfdfd;
+    }
+
+    .font-preview.tw-sung {
+      font-family: "TW-Sung", serif;
+    }
+
+    .font-preview.tw-kai {
+      font-family: "TW-Kai", serif;
+    }
+
+    .network-panel {
+      background: var(--code-bg);
+      color: var(--code-text);
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85rem;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+
+    .network-panel h3 {
+      font-size: 0.95rem;
+      color: #94a3b8;
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .log-item {
+      padding: 0.25rem 0;
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .log-item .tag-gf {
+      color: #38bdf8;
+    }
+
+    .log-item .tag-tail {
+      color: #f472b6;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>CNS11643 Web Font CDN Demo <span class="badge">Unofficial</span></h1>
+      <p style="color: var(--text-muted)">
+        Demonstrating Google Fonts TC frequency slicing combined with CNS 135-character rare tail shards.
+      </p>
+    </header>
+
+    <div class="notice-box">
+      <strong>Note:</strong> This web font distribution is generated from the official open data of
+      <strong>CNS11643 (全字庫) / Ministry of Digital Affairs (數位發展部)</strong>.
+      In production, include fonts via <code>jsdelivr</code> with pinned exact version.
+    </div>
+
+    <div class="controls">
+      <label><strong>Font Family:</strong></label>
+      <div class="btn-group" id="family-selector">
+        <button class="active" data-family="TW-Sung">全字庫正宋體 (TW-Sung)</button>
+        <button data-family="TW-Kai">全字庫正楷體 (TW-Kai)</button>
+      </div>
+
+      <label style="margin-left: auto;"><strong>Font Size:</strong></label>
+      <input type="range" id="size-slider" min="16" max="48" value="28">
+      <span id="size-val">28px</span>
+    </div>
+
+    <!-- Common Traditional Chinese Section -->
+    <div class="card">
+      <h2>1. 常用繁體中文 (Common Traditional Chinese — Google Slice)</h2>
+      <div class="font-preview tw-sung" id="box-common" contenteditable="true">
+        天地玄黃，宇宙洪荒。日月盈昃，辰宿列張。寒來暑往，秋收冬藏。
+        這是以全字庫正宋體與正楷體呈現的標準繁體中文範例。
+      </div>
+    </div>
+
+    <!-- Ext-B Section -->
+    <div class="card">
+      <h2>2. 第二字面擴充字 (CJK Unified Ideographs Extension B)</h2>
+      <div class="font-preview tw-sung" id="box-extb" contenteditable="true">
+        𠀀 𠀁 𠀂 𠀃 𠀄 𠀅 𠀆 𠀇 𠀈 𠀉 (U+20000 起始字集)
+      </div>
+    </div>
+
+    <!-- Rare / Plus Section -->
+    <div class="card">
+      <h2>3. 第十五字面罕用字／戶政姓名用字 (Plane 15 / Plus / PUA)</h2>
+      <div class="font-preview tw-sung" id="box-plus" contenteditable="true">
+        󰀀 󰀁 󰀂 (U+F0000 範圍全字庫擴充字符)
+      </div>
+    </div>
+
+    <!-- Live Network Shards Inspector -->
+    <div class="network-panel">
+      <h3>
+        <span>Loaded WOFF2 Shards (<span id="shard-count">0</span>)</span>
+        <button id="clear-log" style="background: none; border: none; color: #94a3b8; cursor: pointer; text-decoration: underline;">Clear</button>
+      </h3>
+      <div id="network-log">
+        <!-- Live log items -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let activeFamily = "TW-Sung";
+    const requestedShards = new Set();
+
+    // Family toggle
+    document.querySelectorAll("#family-selector button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#family-selector button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        activeFamily = btn.dataset.family;
+        const boxes = document.querySelectorAll(".font-preview");
+        boxes.forEach(box => {
+          box.className = `font-preview ${activeFamily.toLowerCase()}`;
+        });
+      });
+    });
+
+    // Font size slider
+    const sizeSlider = document.getElementById("size-slider");
+    const sizeVal = document.getElementById("size-val");
+    sizeSlider.addEventListener("input", (e) => {
+      const sz = e.target.value + "px";
+      sizeVal.textContent = sz;
+      document.querySelectorAll(".font-preview").forEach(b => b.style.fontSize = sz);
+    });
+
+    // Monitor Performance Resource Timing to observe loaded WOFF2 shards
+    function logResource(entry) {
+      if (!entry.name.endsWith(".woff2")) return;
+      const url = new URL(entry.name);
+      const filename = url.pathname.split("/").pop();
+      if (requestedShards.has(filename)) return;
+
+      requestedShards.add(filename);
+      const logContainer = document.getElementById("network-log");
+      const item = document.createElement("div");
+      item.className = "log-item";
+
+      const isGoogleSlice = filename.startsWith("gf-");
+      const tagClass = isGoogleSlice ? "tag-gf" : "tag-tail";
+      const tagLabel = isGoogleSlice ? "[Google Slice]" : "[CNS Tail]";
+
+      item.innerHTML = `
+        <span class="${tagClass}">${tagLabel} ${filename}</span>
+        <span style="color: #64748b">${Math.round(entry.duration)}ms</span>
+      `;
+      logContainer.appendChild(item);
+      document.getElementById("shard-count").textContent = requestedShards.size;
+    }
+
+    const observer = new PerformanceObserver((list) => {
+      list.getEntries().forEach(logResource);
+    });
+    observer.observe({ entryTypes: ["resource"] });
+
+    // Also check pre-existing entries
+    performance.getEntriesByType("resource").forEach(logResource);
+
+    document.getElementById("clear-log").addEventListener("click", () => {
+      requestedShards.clear();
+      document.getElementById("network-log").innerHTML = "";
+      document.getElementById("shard-count").textContent = "0";
+    });
+  </script>
+</body>
+</html>
