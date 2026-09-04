@@ -87,3 +87,50 @@ def test_cli_build_all_offline(tmp_path: Path):
     val_res = runner.invoke(main, ["validate", str(output_dir / "tw-sung")])
     assert val_res.exit_code == 0
     assert "is valid!" in val_res.output
+
+
+def test_resolve_package_scope_precedence(monkeypatch):
+    """Verify resolve_package_scope prioritizes arg > NPM_SCPOE > NPM_SCOPE > default."""
+    from cns_webfont.builder import resolve_package_scope
+
+    monkeypatch.delenv("NPM_SCPOE", raising=False)
+    monkeypatch.delenv("NPM_SCOPE", raising=False)
+
+    # 1. Default fallback
+    assert resolve_package_scope() == "@cns11643"
+    assert resolve_package_scope(None) == "@cns11643"
+
+    # 2. Argument passed without '@'
+    assert resolve_package_scope("my-scope") == "@my-scope"
+    assert resolve_package_scope("@my-scope") == "@my-scope"
+
+    # 3. NPM_SCOPE environment variable
+    monkeypatch.setenv("NPM_SCOPE", "scope-from-scope")
+    assert resolve_package_scope() == "@scope-from-scope"
+
+    # 4. NPM_SCPOE environment variable (has priority over NPM_SCOPE)
+    monkeypatch.setenv("NPM_SCPOE", "scope-from-scpoe")
+    assert resolve_package_scope() == "@scope-from-scpoe"
+
+    # 5. Argument overrides environment variables
+    assert resolve_package_scope("@explicit") == "@explicit"
+
+
+def test_cli_check_upstream_with_npm_scpoe_env(monkeypatch):
+    """Verify check-upstream CLI uses NPM_SCPOE environment variable."""
+    monkeypatch.setenv("NPM_SCPOE", "test-user")
+    mock_info = UpstreamInfo(
+        version="20260805",
+        release_date="2026-08-05",
+        sung_url="http://example.com/sung.zip",
+        kai_url="http://example.com/kai.zip",
+        csv_url="http://example.com/list.csv",
+        release_url="http://example.com/rel.txt",
+    )
+    with patch("cns_webfont.cli.check_upstream", return_value=mock_info):
+        with patch("cns_webfont.cli.is_package_published", return_value=False):
+            runner = CliRunner()
+            result = runner.invoke(main, ["check-upstream"])
+            assert result.exit_code == 0
+            assert "@test-user" in result.output
+            assert "@test-user/tw-sung" in result.output

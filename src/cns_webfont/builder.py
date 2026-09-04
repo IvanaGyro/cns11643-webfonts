@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -158,6 +159,24 @@ def _generate_package_readme(
     )
 
 
+def resolve_package_scope(scope: str | None = None) -> str:
+    """Resolve npm package scope from argument or environment variables.
+
+    Priority:
+    1. Explicit scope argument (if provided and non-empty)
+    2. Environment variable NPM_SCPOE (supports spelling variants)
+    3. Environment variable NPM_SCOPE
+    4. Default fallback: '@cns11643'
+
+    Ensures the returned scope starts with '@' and has trailing slashes removed.
+    """
+    raw = scope or os.environ.get("NPM_SCPOE") or os.environ.get("NPM_SCOPE") or "@cns11643"
+    cleaned = raw.strip().rstrip("/")
+    if not cleaned.startswith("@"):
+        cleaned = f"@{cleaned}"
+    return cleaned
+
+
 @dataclass
 class BuildResult:
     """Summary of a successful package build."""
@@ -177,7 +196,7 @@ def build_font_package(
     google_metadata_path: Path,
     upstream_version: str,
     output_package_dir: Path,
-    package_scope: str = "@cns11643",
+    package_scope: str | None = None,
     recipe_revision: int = 0,
     deterministic_timestamp: int = 1700000000,
     previous_manifest_path: Path | None = None,
@@ -202,7 +221,7 @@ def build_font_package(
         google_metadata_path: Path to pinned google-fonts metadata.json.
         upstream_version: Upstream version string (e.g. '20260805').
         output_package_dir: Target output package directory.
-        package_scope: npm package scope (default '@cns11643').
+        package_scope: npm package scope (defaults to env NPM_SCPOE / NPM_SCOPE or '@cns11643').
         recipe_revision: Recipe revision integer.
         deterministic_timestamp: Timestamp for byte reproducibility.
         previous_manifest_path: Optional path to previous release manifest for regression checks.
@@ -211,8 +230,9 @@ def build_font_package(
     Returns:
         BuildResult instance.
     """
+    resolved_scope = resolve_package_scope(package_scope)
     pkg_slug = family.lower()
-    pkg_name = f"{package_scope.rstrip('/')}/{pkg_slug}" if package_scope else pkg_slug
+    pkg_name = f"{resolved_scope}/{pkg_slug}"
     pkg_version = make_package_version(upstream_version, recipe_revision)
 
     if work_dir is None:

@@ -21,6 +21,10 @@ permissions:
   id-token: write
   issues: write
 
+env:
+  NPM_SCPOE: ${{ secrets.NPM_SCPOE || vars.NPM_SCPOE || '' }}
+  NPM_SCOPE: ${{ secrets.NPM_SCOPE || vars.NPM_SCOPE || secrets.NPM_SCPOE || vars.NPM_SCPOE || '@cns11643' }}
+
 jobs:
   check-and-release:
     name: Check Upstream, Build and Publish
@@ -47,26 +51,34 @@ jobs:
           set -e
           echo "Checking upstream..."
           python -c "
-          import sys
+          import os, sys
+          from cns_webfont.builder import resolve_package_scope
           from cns_webfont.upstream import check_upstream, is_package_published
+
+          scope = resolve_package_scope()
+          print(f'Using npm scope: {scope}')
 
           info = check_upstream()
           print(f'UPSTREAM_VERSION={info.version}')
           with open('UPSTREAM_VERSION.txt', 'w') as f:
               f.write(info.version)
 
-          sung_pub = is_package_published('@cns11643/tw-sung', info.version)
-          kai_pub = is_package_published('@cns11643/tw-kai', info.version)
+          sung_pub = is_package_published(f'{scope}/tw-sung', info.version)
+          kai_pub = is_package_published(f'{scope}/tw-kai', info.version)
 
           needs_build = not (sung_pub and kai_pub)
           print(f'NEEDS_BUILD={needs_build}')
           with open('NEEDS_BUILD.txt', 'w') as f:
               f.write('true' if needs_build else 'false')
+          with open('SCOPE.txt', 'w') as f:
+              f.write(scope)
           "
           UPSTREAM_VER=$(cat UPSTREAM_VERSION.txt)
           NEEDS_BUILD=$(cat NEEDS_BUILD.txt)
+          RESOLVED_SCOPE=$(cat SCOPE.txt)
           echo "version=${UPSTREAM_VER}" >> $GITHUB_OUTPUT
           echo "needs_build=${NEEDS_BUILD}" >> $GITHUB_OUTPUT
+          echo "scope=${RESOLVED_SCOPE}" >> $GITHUB_OUTPUT
 
       - name: Early exit if up-to-date
         if: ${{ steps.upstream_check.outputs.needs_build == 'false' && (github.event_name != 'workflow_dispatch' || !inputs.force_build) }}
@@ -84,6 +96,7 @@ jobs:
             --sources-dir sources \
             --output-dir packages \
             --upstream-version ${{ steps.upstream_check.outputs.version }} \
+            --scope "${{ steps.upstream_check.outputs.scope }}" \
             --offline
 
       - name: Validate built packages
@@ -104,7 +117,7 @@ jobs:
           npx playwright install --with-deps
           npx playwright test
 
-      - name: Publish @cns11643/tw-sung to npm
+      - name: Publish TW-Sung to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN || secrets.NODE_AUTH_TOKEN }}
         run: |
@@ -112,7 +125,7 @@ jobs:
           npm publish --access public --provenance
           cd ../..
 
-      - name: Publish @cns11643/tw-kai to npm
+      - name: Publish TW-Kai to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN || secrets.NODE_AUTH_TOKEN }}
         run: |
@@ -125,10 +138,11 @@ jobs:
           echo "Running post-publish smoke test on jsDelivr..."
           python -c "
           import time, requests, sys
+          scope = '${{ steps.upstream_check.outputs.scope }}'
           version = '${{ steps.upstream_check.outputs.version }}.0.0'
           urls = [
-              f'https://cdn.jsdelivr.net/npm/@cns11643/tw-sung@{version}/tw-sung.css',
-              f'https://cdn.jsdelivr.net/npm/@cns11643/tw-kai@{version}/tw-kai.css',
+              f'https://cdn.jsdelivr.net/npm/{scope}/tw-sung@{version}/tw-sung.css',
+              f'https://cdn.jsdelivr.net/npm/{scope}/tw-kai@{version}/tw-kai.css',
           ]
           # Retry up to 5 times with backoff to allow CDN propagation
           for url in urls:

@@ -9,7 +9,10 @@ from pathlib import Path
 import click
 
 from cns_webfont import __version__
-from cns_webfont.builder import build_font_package
+from cns_webfont.builder import (
+    build_font_package,
+    resolve_package_scope,
+)
 from cns_webfont.fonts import inspect_font_file
 from cns_webfont.upstream import (
     check_upstream,
@@ -40,10 +43,15 @@ def main(verbose: bool) -> None:
 
 
 @main.command("check-upstream")
-@click.option("--scope", default="@cns11643", help="npm scope to check against.")
-def check_upstream_cmd(scope: str) -> None:
+@click.option(
+    "--scope",
+    default=None,
+    help="npm scope to check against (defaults to env NPM_SCPOE / NPM_SCOPE or @cns11643).",
+)
+def check_upstream_cmd(scope: str | None) -> None:
     """Check official upstream for updates and compare with published npm versions."""
-    click.echo("Checking official CNS11643 upstream...")
+    resolved_scope = resolve_package_scope(scope)
+    click.echo(f"Checking official CNS11643 upstream (npm scope: {resolved_scope})...")
     try:
         info = check_upstream()
     except Exception as err:
@@ -52,8 +60,8 @@ def check_upstream_cmd(scope: str) -> None:
 
     click.echo(f"Upstream version: {info.version} ({info.release_date})")
 
-    sung_pkg = f"{scope}/tw-sung"
-    kai_pkg = f"{scope}/tw-kai"
+    sung_pkg = f"{resolved_scope}/tw-sung"
+    kai_pkg = f"{resolved_scope}/tw-kai"
 
     sung_pub = is_package_published(sung_pkg, info.version, recipe_revision=0)
     kai_pub = is_package_published(kai_pkg, info.version, recipe_revision=0)
@@ -143,17 +151,22 @@ def validate_cmd(package_dir: Path) -> None:
 )
 @click.option("--upstream-version", help="Override upstream version string (e.g. 20260805).")
 @click.option("--recipe-revision", default=0, type=int, help="Recipe revision integer.")
-@click.option("--scope", default="@cns11643", help="npm scope.")
+@click.option(
+    "--scope",
+    default=None,
+    help="npm scope (defaults to env NPM_SCPOE / NPM_SCOPE or @cns11643).",
+)
 @click.option("--offline", is_flag=True, help="Operate offline with existing local archives.")
 def build_all_cmd(
     output_dir: Path,
     sources_dir: Path,
     upstream_version: str | None,
     recipe_revision: int,
-    scope: str,
+    scope: str | None,
     offline: bool,
 ) -> None:
     """Full end-to-end build for TW-Sung and TW-Kai webfont packages."""
+    resolved_scope = resolve_package_scope(scope)
     google_strategy = Path("data/google-fonts/traditional-chinese_default.txt")
     google_metadata = Path("data/google-fonts/metadata.json")
 
@@ -197,7 +210,7 @@ def build_all_cmd(
         google_metadata_path=google_metadata,
         upstream_version=version,
         output_package_dir=sung_out,
-        package_scope=scope,
+        package_scope=resolved_scope,
         recipe_revision=recipe_revision,
     )
     click.secho(
@@ -216,7 +229,7 @@ def build_all_cmd(
         google_metadata_path=google_metadata,
         upstream_version=version,
         output_package_dir=kai_out,
-        package_scope=scope,
+        package_scope=resolved_scope,
         recipe_revision=recipe_revision,
     )
     click.secho(
