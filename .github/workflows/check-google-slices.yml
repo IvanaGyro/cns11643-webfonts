@@ -22,7 +22,6 @@ jobs:
       - name: Setup Pixi
         uses: prefix-dev/setup-pixi@v0.8.3
         with:
-          pixi-version: v0.41.4
           cache: true
 
       - name: Check for upstream strategy update
