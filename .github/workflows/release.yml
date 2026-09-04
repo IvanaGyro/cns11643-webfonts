@@ -1,0 +1,174 @@
+name: Release CNS11643 Web Fonts
+
+on:
+  schedule:
+    # Run weekly on Mondays at 03:00 UTC
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: 'Force build and publish even if version matches npm'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: cns-webfont-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+
+jobs:
+  check-and-release:
+    name: Check Upstream, Build and Publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.3
+        with:
+          pixi-version: v0.41.4
+          cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Check upstream version vs npm registry
+        id: upstream_check
+        run: |
+          set -e
+          echo "Checking upstream..."
+          python -c "
+          import sys
+          from cns_webfont.upstream import check_upstream, is_package_published
+
+          info = check_upstream()
+          print(f'UPSTREAM_VERSION={info.version}')
+          with open('UPSTREAM_VERSION.txt', 'w') as f:
+              f.write(info.version)
+
+          sung_pub = is_package_published('@cns11643/tw-sung', info.version)
+          kai_pub = is_package_published('@cns11643/tw-kai', info.version)
+
+          needs_build = not (sung_pub and kai_pub)
+          print(f'NEEDS_BUILD={needs_build}')
+          with open('NEEDS_BUILD.txt', 'w') as f:
+              f.write('true' if needs_build else 'false')
+          "
+          UPSTREAM_VER=$(cat UPSTREAM_VERSION.txt)
+          NEEDS_BUILD=$(cat NEEDS_BUILD.txt)
+          echo "version=${UPSTREAM_VER}" >> $GITHUB_OUTPUT
+          echo "needs_build=${NEEDS_BUILD}" >> $GITHUB_OUTPUT
+
+      - name: Early exit if up-to-date
+        if: ${{ steps.upstream_check.outputs.needs_build == 'false' && !inputs.force_build }}
+        run: |
+          echo "All packages are already published and up-to-date with upstream ${{ steps.upstream_check.outputs.version }}. Exiting."
+          exit 0
+
+      - name: Download official font archives
+        run: |
+          pixi run cns-webfont download --output-dir sources
+
+      - name: Build TW-Sung and TW-Kai packages
+        run: |
+          pixi run cns-webfont build-all \
+            --sources-dir sources \
+            --output-dir packages \
+            --upstream-version ${{ steps.upstream_check.outputs.version }} \
+            --offline
+
+      - name: Validate built packages
+        run: |
+          pixi run cns-webfont validate packages/tw-sung
+          pixi run cns-webfont validate packages/tw-kai
+
+      - name: Package size guard (npm pack dry-run)
+        run: |
+          echo "Checking unpacked package sizes..."
+          cd packages/tw-sung && npm pack --dry-run && cd ../..
+          cd packages/tw-kai && npm pack --dry-run && cd ../..
+
+      - name: Setup Playwright browser testing
+        run: |
+          cd browser-tests
+          npm ci || npm install
+          npx playwright install --with-deps
+          npx playwright test
+
+      - name: Publish @cns11643/tw-sung to npm (Trusted Publishing / OIDC)
+        run: |
+          cd packages/tw-sung
+          npm publish --access public --provenance
+          cd ../..
+
+      - name: Publish @cns11643/tw-kai to npm (Trusted Publishing / OIDC)
+        run: |
+          cd packages/tw-kai
+          npm publish --access public --provenance
+          cd ../..
+
+      - name: Post-publish jsDelivr CDN smoke test
+        run: |
+          echo "Running post-publish smoke test on jsDelivr..."
+          python -c "
+          import time, requests, sys
+          version = '${{ steps.upstream_check.outputs.version }}.0.0'
+          urls = [
+              f'https://cdn.jsdelivr.net/npm/@cns11643/tw-sung@{version}/tw-sung.css',
+              f'https://cdn.jsdelivr.net/npm/@cns11643/tw-kai@{version}/tw-kai.css',
+          ]
+          # Retry up to 5 times with backoff to allow CDN propagation
+          for url in urls:
+              print(f'Checking {url}...')
+              for attempt in range(5):
+                  try:
+                      res = requests.get(url, timeout=10)
+                      if res.status_code == 200:
+                          print(f'  [OK] HTTP 200 (content-length: {len(res.content)})')
+                          break
+                  except Exception as e:
+                      pass
+                  time.sleep(15)
+              else:
+                  print(f'  [WARN] CDN propagation pending for {url}')
+          "
+
+      - name: Report failure as GitHub Issue
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueTitle = `Automated CNS11643 update failed: ${{ steps.upstream_check.outputs.version || 'unknown' }}`;
+            const issueBody = `### Automated Upstream Release Run Failed
+
+- **Upstream Version**: \`${{ steps.upstream_check.outputs.version || 'unknown' }}\`
+- **Workflow Run**: [View Run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+- **Event**: ${context.eventName}
+- **Timestamp**: ${new Date().toISOString()}
+
+Please inspect the run logs for details regarding validation, regression gates, or network failures.`;
+
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+            const existing = issues.data.find(i => i.title === issueTitle);
+            if (!existing) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: issueTitle,
+                body: issueBody
+              });
+            }

@@ -1,0 +1,100 @@
+name: Check Google Slicing Updates
+
+on:
+  schedule:
+    # Run weekly on Mondays at 04:00 UTC
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-slices:
+    name: Check googlefonts/nam-files for TC Slicing Updates
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.3
+        with:
+          pixi-version: v0.41.4
+          cache: true
+
+      - name: Check for upstream strategy update
+        id: check_update
+        run: |
+          set -e
+          python -c "
+          import json, requests
+          from pathlib import Path
+          from cns_webfont.google_slices import parse_google_slices
+
+          pinned_path = Path('data/google-fonts/traditional-chinese_default.txt')
+          meta_path = Path('data/google-fonts/metadata.json')
+
+          meta = json.loads(meta_path.read_text(encoding='utf-8'))
+          old_commit = meta.get('commit')
+
+          # Get latest commit on main
+          api_url = 'https://api.github.com/repos/googlefonts/nam-files/commits/main'
+          r = requests.get(api_url, timeout=15)
+          latest_sha = r.json()['sha']
+
+          if latest_sha == old_commit:
+              print('Strategy is up-to-date with latest commit.')
+              with open('CHANGED.txt', 'w') as f:
+                  f.write('false')
+              sys.exit(0)
+
+          # Fetch latest content
+          raw_url = f'https://raw.githubusercontent.com/googlefonts/nam-files/{latest_sha}/slices/traditional-chinese_default.txt'
+          resp = requests.get(raw_url, timeout=15)
+          new_text = resp.text
+
+          temp_new = Path('data/google-fonts/temp_new.txt')
+          temp_new.write_text(new_text, encoding='utf-8')
+
+          old_slices = parse_google_slices(pinned_path)
+          new_slices = parse_google_slices(temp_new)
+          temp_new.unlink()
+
+          old_cps = {cp for s in old_slices for cp in s.codepoints}
+          new_cps = {cp for s in new_slices for cp in s.codepoints}
+
+          added = len(new_cps - old_cps)
+          removed = len(old_cps - new_cps)
+
+          # Update files
+          pinned_path.write_text(new_text, encoding='utf-8')
+          meta['commit'] = latest_sha
+          meta['subsetCount'] = len(new_slices)
+          meta['totalCodepoints'] = len(new_cps)
+          meta_path.write_text(json.dumps(meta, indent=2), encoding='utf-8')
+
+          summary = f'''### Google Traditional Chinese Slicing Update
+- **Old Commit**: \`{old_commit}\`
+- **New Commit**: \`{latest_sha}\`
+- **Subsets**: {len(old_slices)} -> {len(new_slices)}
+- **Total Codepoints**: {len(old_cps)} -> {len(new_cps)} (+{added}, -{removed})
+'''
+          with open('PR_BODY.md', 'w') as f:
+              f.write(summary)
+          with open('CHANGED.txt', 'w') as f:
+              f.write('true')
+          "
+
+      - name: Create Pull Request if updated
+        if: hashFiles('CHANGED.txt') != ''
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore(data): update Google Fonts Traditional Chinese slicing strategy"
+          title: "chore(data): update Google Fonts TC slicing strategy"
+          body-path: PR_BODY.md
+          branch: chore/google-slices-update
+          base: main
+          labels: dependencies, automated-pr
