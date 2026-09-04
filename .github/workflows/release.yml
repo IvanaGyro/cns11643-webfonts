@@ -104,13 +104,17 @@ jobs:
           npx playwright install --with-deps
           npx playwright test
 
-      - name: Publish @cns11643/tw-sung to npm (Trusted Publishing / OIDC)
+      - name: Publish @cns11643/tw-sung to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN || secrets.NODE_AUTH_TOKEN }}
         run: |
           cd packages/tw-sung
           npm publish --access public --provenance
           cd ../..
 
-      - name: Publish @cns11643/tw-kai to npm (Trusted Publishing / OIDC)
+      - name: Publish @cns11643/tw-kai to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN || secrets.NODE_AUTH_TOKEN }}
         run: |
           cd packages/tw-kai
           npm publish --access public --provenance
