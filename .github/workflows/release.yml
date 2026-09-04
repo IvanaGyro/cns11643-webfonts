@@ -50,7 +50,7 @@ jobs:
         run: |
           set -e
           echo "Checking upstream..."
-          python -c "
+          pixi run python -c "
           import os, sys
           from cns_webfont.builder import resolve_package_scope
           from cns_webfont.upstream import check_upstream, is_package_published
@@ -136,7 +136,7 @@ jobs:
       - name: Post-publish jsDelivr CDN smoke test
         run: |
           echo "Running post-publish smoke test on jsDelivr..."
-          python -c "
+          pixi run python -c "
           import time, requests, sys
           scope = '${{ steps.upstream_check.outputs.scope }}'
           version = '${{ steps.upstream_check.outputs.version }}.0.0'

@@ -28,7 +28,7 @@ jobs:
         id: check_update
         run: |
           set -e
-          python -c "
+          pixi run python -c "
           import json, requests
           from pathlib import Path
           from cns_webfont.google_slices import parse_google_slices
