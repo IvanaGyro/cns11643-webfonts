@@ -78,4 +78,5 @@ ini_options.testpaths = [
 ]
 ini_options.pythonpath = [
   "src",
+  ".",
 ]
