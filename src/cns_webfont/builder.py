@@ -320,11 +320,20 @@ def build_font_package(
     readme_text = _generate_package_readme(family, pkg_name, pkg_version)
     (output_package_dir / "README.md").write_text(readme_text, encoding="utf-8")
 
+    repo_slug = os.environ.get("GITHUB_REPOSITORY", "IvanaGyro/cns11643-webfonts")
     package_json_data = {
         "name": pkg_name,
         "version": pkg_version,
         "description": f"CNS11643 {family} Web Font package",
         "license": "OFL-1.1",
+        "repository": {
+            "type": "git",
+            "url": f"https://github.com/{repo_slug}",
+        },
+        "homepage": f"https://github.com/{repo_slug}#readme",
+        "bugs": {
+            "url": f"https://github.com/{repo_slug}/issues",
+        },
         "style": f"./{pkg_slug}.css",
         "files": [
             f"{pkg_slug}.css",

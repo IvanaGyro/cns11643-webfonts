@@ -53,6 +53,7 @@ def test_full_build_sung_and_kai(tmp_path: Path):
     assert pkg_json["version"] == "20260805.0.0"
     assert pkg_json["cns11643"]["upstreamVersion"] == "20260805"
     assert pkg_json["style"] == "./tw-sung.css"
+    assert pkg_json["repository"]["url"] == "https://github.com/IvanaGyro/cns11643-webfonts"
 
     # 2. Build TW-Kai
     res_kai = build_font_package(
