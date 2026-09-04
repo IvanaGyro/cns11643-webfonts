@@ -84,3 +84,28 @@ def test_subset_empty_codepoints(tmp_path: Path):
 
     with pytest.raises(SubsettingError, match="empty codepoints set"):
         subset_font_to_woff2(source_ttf, set(), tmp_path / "fail.woff2")
+
+
+def test_subset_shared_glyph_cmap_isolation(tmp_path: Path):
+    """Verify that if multiple codepoints share a glyph in the source font,
+
+    only the requested codepoints are retained in the subset cmap.
+    """
+    source_ttf = tmp_path / "source_dup.ttf"
+    create_synthetic_ttf({0x4E00, 0x4E01}, output_path=source_ttf)
+
+    # In source font, map 0x2F00 to the same glyph as 0x4E00
+    font = TTFont(source_ttf)
+    glyph_name = font.getBestCmap()[0x4E00]
+    for subtable in font["cmap"].tables:
+        if subtable.isUnicode():
+            subtable.cmap[0x2F00] = glyph_name
+    font.save(source_ttf)
+
+    # Subset ONLY for 0x2F00
+    out_woff2 = tmp_path / "shard_2f00.woff2"
+    subset_font_to_woff2(source_ttf, {0x2F00}, out_woff2)
+
+    # Verify WOFF2 cmap strictly contains only 0x2F00 (0x4E00 must not leak in)
+    res_font = TTFont(out_woff2, flavor="woff2")
+    assert set(res_font.getBestCmap().keys()) == {0x2F00}

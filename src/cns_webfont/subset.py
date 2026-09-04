@@ -69,6 +69,14 @@ def subset_font_to_woff2(
     except Exception as err:
         raise SubsettingError(f"Subsetter failed for {output_woff2_path.name}: {err}") from err
 
+    # Prune cmap to strictly retain only the requested codepoints for this shard.
+    # In fonts with shared glyphs or composite dependencies, fontTools.subset may retain
+    # secondary cmap entries for retained glyphs. Enforce exact matching for CSS alignment.
+    if "cmap" in font:
+        for subtable in font["cmap"].tables:
+            if subtable.isUnicode():
+                subtable.cmap = {cp: name for cp, name in subtable.cmap.items() if cp in codepoints}
+
     # Normalize head table timestamps for byte-level build reproducibility
     if "head" in font:
         font["head"].created = deterministic_timestamp
