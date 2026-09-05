@@ -866,12 +866,8 @@
       const targetUrl = nocache ? `${url}${url.includes('?') ? '&' : '?'}_t=${Date.now()}` : url;
       const t0 = performance.now();
       try {
-        const fetchOptions = {
-          method: "GET",
-          headers: nocache ? { "Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache" } : {},
-          cache: nocache ? "no-store" : "default"
-        };
-        const res = await fetch(targetUrl, fetchOptions);
+        // Use a simple CORS GET request without custom headers to prevent OPTIONS preflight failures
+        const res = await fetch(targetUrl, { method: "GET" });
         const latency = Math.round(performance.now() - t0);
         const blob = await res.blob();
         const sizeKb = (blob.size / 1024).toFixed(1);
