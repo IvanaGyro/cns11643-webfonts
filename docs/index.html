@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>CNS11643 全字庫 Web Font CDN — 難字對照與字體分片展示</title>
+  <title>CNS11643 Web Fonts (第三方開源 CDN) — 全字庫難字按需分片展示</title>
 
   <!-- Default jsDelivr CDN Stylesheets -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ivanagyro/tw-sung@20260805.1.0/tw-sung.css" id="css-sung">
@@ -42,33 +42,65 @@
       padding-bottom: 3rem;
     }
 
-    /* Top accessibility & navigation */
+    /* Top disclosure & external official links */
     .top-bar {
-      background: #731e1e;
-      color: rgba(255, 255, 255, 0.9);
-      font-size: 0.8rem;
-      padding: 0.4rem 1rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+      background: #231f1d;
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 0.78rem;
+      padding: 0.45rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     }
 
-    .top-bar .container {
+    .top-bar-content {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
     }
 
-    .top-bar a {
-      color: inherit;
-      text-decoration: none;
+    .top-bar-disclaimer {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
-    /* Header Banner mimicking cns11643.gov.tw */
-    header.official-header {
-      background: linear-gradient(135deg, var(--primary) 0%, #832626 100%);
+    .badge-tag {
+      background: #b91c1c;
+      color: #ffffff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.1rem 0.4rem;
+      letter-spacing: 0.05em;
+    }
+
+    .top-bar-links {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .top-bar-links a {
+      color: #e2e8f0;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .top-bar-links a:hover {
+      color: #ffffff;
+    }
+
+    .top-bar-links .sep {
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    /* Header Banner */
+    header.page-header {
+      background: linear-gradient(135deg, var(--primary) 0%, #7d2424 100%);
       color: #ffffff;
       padding: 1.6rem 1rem;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-      border-bottom: 3px solid #6b1f1f;
+      border-bottom: 3px solid #5a1818;
       margin-bottom: 2rem;
     }
 
@@ -87,24 +119,26 @@
       display: flex;
       align-items: center;
       gap: 0.75rem;
+      flex-wrap: wrap;
     }
 
-    .seal-badge {
+    .project-badge {
       display: inline-block;
-      border: 2px solid #ffffff;
+      border: 1.5px solid #ffffff;
       padding: 0.15rem 0.55rem;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: 700;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.08em;
       border-radius: 0;
-      background: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.15);
       text-shadow: 0 1px 2px rgba(0,0,0,0.2);
     }
 
     .brand-sub {
       font-size: 0.9rem;
-      color: rgba(255, 255, 255, 0.88);
-      margin-top: 0.3rem;
+      color: rgba(255, 255, 255, 0.9);
+      margin-top: 0.35rem;
+      line-height: 1.5;
     }
 
     .header-links a {
@@ -113,9 +147,11 @@
       border: 1px solid rgba(255, 255, 255, 0.4);
       text-decoration: none;
       font-size: 0.85rem;
-      padding: 0.4rem 0.8rem;
+      padding: 0.45rem 0.85rem;
       border-radius: 0;
       transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+      display: inline-block;
     }
 
     .header-links a:hover {
@@ -152,17 +188,17 @@
       color: var(--primary);
     }
 
-    /* Control Toolbar */
+    /* Control Toolbar (Global Preview Controls) */
     .toolbar-panel {
       background: #ffffff;
       border: 1px solid var(--border);
       border-radius: 0;
-      padding: 1.25rem;
+      padding: 0.9rem 1.25rem;
       margin-bottom: 1.75rem;
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
       display: flex;
       flex-wrap: wrap;
-      gap: 1.25rem;
+      gap: 1.5rem;
       align-items: center;
     }
 
@@ -172,10 +208,21 @@
       gap: 0.5rem;
     }
 
+    .control-item-slider {
+      flex: 1;
+      min-width: 240px;
+    }
+
+    .control-item-slider input[type="range"] {
+      flex: 1;
+      max-width: 240px;
+    }
+
     .control-label {
       font-size: 0.85rem;
       font-weight: 700;
       color: var(--primary-dark);
+      white-space: nowrap;
     }
 
     select, input[type="text"] {
@@ -190,6 +237,18 @@
 
     select:focus, input[type="text"]:focus {
       border-color: var(--primary);
+    }
+
+    /* Section 3 Action Bar */
+    .diag-action-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.85rem;
+      align-items: center;
+      margin: 0.75rem 0 1.25rem 0;
+      padding: 0.75rem 1rem;
+      background: #faf7f2;
+      border: 1px solid var(--border);
     }
 
     .btn {
@@ -507,36 +566,104 @@
     footer a:hover {
       text-decoration: underline;
     }
+
+    /* Mobile Responsive Overrides */
+    @media (max-width: 640px) {
+      .top-bar-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.35rem;
+      }
+      header.page-header {
+        padding: 1.25rem 1rem;
+        margin-bottom: 1.25rem;
+      }
+      .brand-title {
+        font-size: 1.35rem;
+      }
+      .header-links {
+        width: 100%;
+      }
+      .header-links a {
+        display: block;
+        text-align: center;
+      }
+      .toolbar-panel {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.85rem;
+        padding: 1rem;
+      }
+      .control-item {
+        justify-content: space-between;
+        width: 100%;
+      }
+      .control-item select {
+        flex: 1;
+        max-width: none;
+      }
+      .control-item-slider {
+        min-width: unset;
+      }
+      .control-item-slider input[type="range"] {
+        max-width: none;
+      }
+      .diag-action-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.65rem;
+        padding: 0.75rem;
+      }
+      .diag-action-bar .btn {
+        width: 100%;
+        justify-content: center;
+        padding: 0.65rem 1rem;
+      }
+      .diag-action-bar .cache-toggle {
+        width: 100%;
+        justify-content: center;
+      }
+      .section-card {
+        padding: 1.15rem 0.9rem;
+      }
+      .section-title {
+        font-size: 1.1rem;
+      }
+    }
   </style>
 </head>
 <body>
 
-  <!-- Top Access bar -->
+  <!-- Top Disclosure Bar -->
   <div class="top-bar">
-    <div class="container">
-      <span>::: 中華民國數位發展部 (moda) 開放資料 &bull; CNS11643 全字庫</span>
-      <div>
-        <a href="https://data.gov.tw/dataset/5961" target="_blank" rel="noopener">政府資料開放平臺</a> &bull;
-        <a href="https://www.cns11643.gov.tw" target="_blank" rel="noopener">全字庫官網</a>
+    <div class="container top-bar-content">
+      <div class="top-bar-disclaimer">
+        <span class="badge-tag">非官方</span>
+        <span>本站為第三方開源 Web Font 專案，非數位發展部或 CMEX 全字庫官方網站</span>
+      </div>
+      <div class="top-bar-links">
+        <a href="https://www.cns11643.gov.tw" target="_blank" rel="noopener">全字庫官網 ↗</a>
+        <span class="sep">&bull;</span>
+        <a href="https://data.gov.tw/dataset/5961" target="_blank" rel="noopener">政府資料開放平臺 ↗</a>
       </div>
     </div>
   </div>
 
   <!-- Header Banner -->
-  <header class="official-header">
+  <header class="page-header">
     <div class="container header-content">
       <div>
         <div class="brand-title">
-          全字庫 CNS11643
-          <span class="seal-badge">Web Font CDN</span>
+          CNS11643 Web Fonts
+          <span class="project-badge">第三方開源 CDN</span>
         </div>
         <div class="brand-sub">
-          官方全字庫正宋體 (TW-Sung) 與正楷體 (TW-Kai) 雲端按需分片字體展示
+          基於臺灣數位發展部「全字庫」開放資料製作之正宋體 (TW-Sung) 與正楷體 (TW-Kai) 雲端按需分片展示
         </div>
       </div>
       <div class="header-links">
         <a href="https://github.com/IvanaGyro/cns11643-webfonts" target="_blank" rel="noopener">
-          GitHub 專案原始碼
+          GitHub 專案原始碼 ↗
         </a>
       </div>
     </div>
@@ -545,11 +672,18 @@
   <main class="container">
     <!-- Notice -->
     <div class="notice-card">
-      <strong>為什麼需要全字庫 Web Font？</strong><br>
-      Windows 預設「標楷體」與「新細明體」僅覆蓋常用 Big5 範圍，在 <strong>CJK Extension B</strong>（第二字面難字）與 <strong>第十五字面造字區（PUA 戶政專用字）</strong> 會直接顯示空白或豆腐塊（<code>□</code>）。全字庫 Web Font CDN 將全字庫龐大的八萬多漢字切分為小於 30KB 的微型分片，瀏覽器只下載當前頁面用到的字，載入迅速且完全補齊難字！
+      <div style="font-weight: 700; color: var(--primary); font-size: 1.05rem; margin-bottom: 0.4rem;">
+        📌 為什麼需要全字庫 Web Font？
+      </div>
+      <p style="margin-bottom: 0.5rem;">
+        Windows 預設「標楷體」與「新細明體」僅涵蓋常用 Big5 範圍，在 <strong>CJK Extension B</strong>（第二字面難字）與 <strong>第十五字面造字區（PUA 戶政專用字）</strong> 會直接顯示空白或豆腐塊（<code>□</code>）。
+      </p>
+      <p style="color: var(--text-muted); font-size: 0.88rem; border-top: 1px dashed var(--border); padding-top: 0.5rem;">
+        💡 <strong>第三方開源解決方案</strong>：本專案依 SIL OFL 1.1 授權將全字庫八萬多漢字切分為微型分片（多數小於 30KB），瀏覽器只在遇到難字時透過 jsDelivr CDN 按需下載對應切片，兼具極速載入與完整補齊罕用字！
+      </p>
     </div>
 
-    <!-- Controls Panel -->
+    <!-- Global Preview Controls -->
     <div class="toolbar-panel">
       <div class="control-item">
         <span class="control-label">CDN 版本：</span>
@@ -560,28 +694,17 @@
         </select>
       </div>
 
-      <div class="control-item">
+      <div class="control-item control-item-slider">
         <span class="control-label">字體大小：</span>
         <input type="range" id="rng-size" min="18" max="56" value="32">
         <span id="txt-size" style="font-weight: 700; min-width: 42px;">32px</span>
-      </div>
-
-      <label class="cache-toggle" title="開啟時測試請求將加上時間戳並禁止快取，以獲取真實網路下載時間與檔案大小">
-        <input type="checkbox" id="chk-nocache" checked>
-        <span>🚫 禁止瀏覽器快取 (每次重新下載測速)</span>
-      </label>
-
-      <div style="margin-left: auto; display: flex; gap: 0.5rem;">
-        <button class="btn" id="btn-run-diag">
-          ⚡ 執行 CDN 與分片測速
-        </button>
       </div>
     </div>
 
     <!-- Section 1: Comparison Table -->
     <section class="section-card">
       <div class="section-title">
-        <span>1. 標楷體 / 新細明體 缺字 vs. 全字庫補全對照表</span>
+        <span>1. 系統預設字體缺字 vs. 全字庫補全對照表</span>
         <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">
           比對 Windows 系統預設字體缺字情況
         </span>
@@ -593,9 +716,9 @@
             <tr>
               <th class="col-meta">難字名稱 / 編碼</th>
               <th>Windows 標楷體<br><small style="color: var(--text-muted); font-weight: normal;">(DFKai-SB)</small></th>
-              <th style="color: var(--primary);">全字庫正楷體<br><small style="color: var(--primary); font-weight: normal;">TW-Kai (CDN)</small></th>
+              <th style="color: var(--primary);">全字庫正楷體<br><small style="color: var(--primary); font-weight: normal;">TW-Kai (本專案 CDN)</small></th>
               <th>Windows 新細明體<br><small style="color: var(--text-muted); font-weight: normal;">(PMingLiU)</small></th>
-              <th style="color: var(--primary);">全字庫正宋體<br><small style="color: var(--primary); font-weight: normal;">TW-Sung (CDN)</small></th>
+              <th style="color: var(--primary);">全字庫正宋體<br><small style="color: var(--primary); font-weight: normal;">TW-Sung (本專案 CDN)</small></th>
             </tr>
           </thead>
           <tbody>
@@ -706,7 +829,7 @@
       <div class="dual-input-grid">
         <div class="input-card">
           <div class="input-header">
-            <span>全字庫正楷體 (TW-Kai via jsDelivr CDN)</span>
+            <span>全字庫正楷體 (TW-Kai via 本專案 CDN)</span>
             <span class="badge-pill badge-ok">書法楷書 & 罕用字支援</span>
           </div>
           <div class="editable-box tw-kai dynamic-font" contenteditable="true" id="box-tw-kai" spellcheck="false">
@@ -716,7 +839,7 @@
 
         <div class="input-card">
           <div class="input-header">
-            <span>Windows 預設 標楷體 (DFKai-SB)</span>
+            <span>Windows 系統預設 標楷體 (DFKai-SB)</span>
             <span class="badge-pill badge-fail">難字缺字或割裂降級</span>
           </div>
           <div class="editable-box sys-kai dynamic-font" contenteditable="true" id="box-sys-kai" spellcheck="false">
@@ -740,6 +863,18 @@
         即時檢測 jsDelivr CDN 節點交付狀態，並透過 <code>PerformanceObserver</code> 即時擷取瀏覽器渲染文字時實際自 CDN 按需下載之 WOFF2 字體分片。勾選「禁止快取」時每次點擊均重新自網路下載並量測純網路延遲與檔案大小：
       </p>
 
+      <!-- Section 3 Actions: Run Speed Test & Cache Toggle -->
+      <div class="diag-action-bar">
+        <button class="btn" id="btn-run-diag">
+          ⚡ 執行 CDN 與分片測速
+        </button>
+
+        <label class="cache-toggle" title="開啟時測試請求將加上時間戳並禁止快取，以獲取真實網路下載時間與檔案大小">
+          <input type="checkbox" id="chk-nocache" checked>
+          <span>🚫 禁止瀏覽器快取 (每次重新下載測速)</span>
+        </label>
+      </div>
+
       <div class="table-container">
         <table class="diag-table">
           <thead>
@@ -755,7 +890,7 @@
           <tbody id="diag-tbody">
             <tr>
               <td colspan="6" style="color: var(--text-muted); text-align: center; padding: 1.5rem;">
-                點擊「⚡ 執行 CDN 與分片測速」開始量測...
+                點擊上方「⚡ 執行 CDN 與分片測速」開始量測...
               </td>
             </tr>
           </tbody>
@@ -766,12 +901,18 @@
 
   <footer>
     <div class="container">
-      <p>
-        中華民國數位發展部 (Ministry of Digital Affairs) &bull; CNS11643 中文標準交換碼全字庫
+      <p style="font-weight: 700; color: var(--text); font-size: 0.95rem;">
+        CNS11643 Web Fonts
+        <span style="font-weight: 400; font-size: 0.85rem; color: var(--text-muted);">
+          &bull; 非官方開源社群專案
+        </span>
       </p>
-      <p style="margin-top: 0.25rem;">
-        字體軟體授權：<a href="https://scripts.sil.org/OFL" target="_blank" rel="noopener">SIL Open Font License 1.1</a> &bull;
-        開源建置工具：<a href="https://github.com/IvanaGyro/cns11643-webfonts" target="_blank" rel="noopener">cns11643-webfonts</a>
+      <p style="margin-top: 0.5rem; font-size: 0.82rem; color: var(--text-muted); line-height: 1.6;">
+        本專案為第三方開源服務，非中華民國數位發展部 (moda) 或 CMEX 全字庫之官方網站。<br>
+        字形原始資料版權歸中華民國數位發展部所有，依 <a href="https://scripts.sil.org/OFL" target="_blank" rel="noopener">SIL Open Font License 1.1</a> 授權釋出。<br>
+        全字庫官方網站：<a href="https://www.cns11643.gov.tw" target="_blank" rel="noopener">cns11643.gov.tw</a> &bull;
+        政府資料開放平臺：<a href="https://data.gov.tw/dataset/5961" target="_blank" rel="noopener">data.gov.tw/dataset/5961</a> &bull;
+        專案原始碼：<a href="https://github.com/IvanaGyro/cns11643-webfonts" target="_blank" rel="noopener">GitHub: IvanaGyro/cns11643-webfonts</a>
       </p>
     </div>
   </footer>
