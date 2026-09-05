@@ -8,6 +8,7 @@ __pycache__/
 
 # Scratch files
 .run_temp.py
+cdn-test.html
 
 # Build and distribution artifacts
 build/
