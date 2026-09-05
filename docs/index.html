@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>CNS11643 全字庫 Web Font CDN — 難字對照與字體分片展示</title>
+
+  <!-- Default jsDelivr CDN Stylesheets -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ivanagyro/tw-sung@20260805.1.0/tw-sung.css" id="css-sung">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ivanagyro/tw-kai@20260805.1.0/tw-kai.css" id="css-kai">
+
+  <style>
+    :root {
+      --primary: #993333;         /* Official CNS11643 Theme Color */
+      --primary-dark: #7a2424;
+      --primary-light: #b34747;
+      --accent: #b45309;
+      --bg: #fcfbfa;               /* Warm Xuan paper tone */
+      --card-bg: #ffffff;
+      --border: #e7e3dc;
+      --border-dark: #d5cfc4;
+      --text: #24201d;             /* Hui ink charcoal */
+      --text-muted: #64748b;
+      --success: #059669;
+      --danger: #dc2626;
+      --code-bg: #1e293b;
+      --code-text: #f8fafc;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding-bottom: 3rem;
+    }
+
+    /* Top accessibility & navigation */
+    .top-bar {
+      background: #802626;
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 0.8rem;
+      padding: 0.35rem 1rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .top-bar .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .top-bar a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* Header Banner mimicking cns11643.gov.tw */
+    header.official-header {
+      background: linear-gradient(135deg, var(--primary) 0%, #832626 100%);
+      color: #ffffff;
+      padding: 1.5rem 1rem;
+      box-shadow: var(--shadow-md);
+      border-bottom: 3px solid #6b1f1f;
+    }
+
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .brand-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .seal-badge {
+      display: inline-block;
+      border: 2px solid #ffffff;
+      padding: 0.15rem 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.15);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+
+    .brand-sub {
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.88);
+      margin-top: 0.3rem;
+    }
+
+    .header-links a {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.15);
+      text-decoration: none;
+      font-size: 0.85rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+
+    .header-links a:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .container {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+
+    /* Main Container */
+    main {
+      margin-top: 1.75rem;
+    }
+
+    /* Info Callout */
+    .notice-card {
+      background: #ffffff;
+      border-left: 4px solid var(--primary);
+      border-top: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.25rem;
+      border-radius: 6px;
+      margin-bottom: 1.5rem;
+      font-size: 0.95rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .notice-card strong {
+      color: var(--primary);
+    }
+
+    /* Control Toolbar */
+    .toolbar-panel {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1.75rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      align-items: center;
+    }
+
+    .control-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .control-label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+    }
+
+    select, input[type="text"] {
+      border: 1px solid var(--border-dark);
+      border-radius: 6px;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.9rem;
+      background: #ffffff;
+      color: var(--text);
+      outline: none;
+    }
+
+    select:focus, input[type="text"]:focus {
+      border-color: var(--primary);
+    }
+
+    .btn {
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 0.45rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: background 0.15s, transform 0.05s;
+    }
+
+    .btn:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+
+    .btn-outline:hover {
+      background: rgba(153, 51, 51, 0.08);
+    }
+
+    .cache-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #991b1b;
+      cursor: pointer;
+    }
+
+    .cache-toggle input {
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
+    /* Section Cards */
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 0.5rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    /* Responsive Comparison Table */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .cns-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      min-width: 680px;
+    }
+
+    .cns-table th, .cns-table td {
+      padding: 0.9rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .cns-table th {
+      background: #faf7f2;
+      color: var(--primary-dark);
+      font-weight: 700;
+      font-size: 0.9rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .col-meta {
+      text-align: left !important;
+      min-width: 160px;
+    }
+
+    .char-name {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text);
+    }
+
+    .char-code {
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      color: var(--accent);
+      font-size: 0.8rem;
+    }
+
+    .glyph-display {
+      font-size: 3rem;
+      line-height: 1;
+      width: 120px;
+    }
+
+    /* Font Classes */
+    .tw-kai {
+      font-family: "TW-Kai", serif;
+      color: var(--text);
+    }
+
+    .tw-sung {
+      font-family: "TW-Sung", serif;
+      color: var(--text);
+    }
+
+    .sys-kai {
+      font-family: "DFKai-SB", "標楷體", cursive;
+      color: #94a3b8;
+    }
+
+    .sys-ming {
+      font-family: "PMingLiU", "新細明體", serif;
+      color: #94a3b8;
+    }
+
+    /* Badges */
+    .badge-pill {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 9999px;
+      margin-top: 0.35rem;
+    }
+
+    .badge-fail {
+      background: #fee2e2;
+      color: var(--danger);
+      border: 1px solid #fca5a5;
+    }
+
+    .badge-ok {
+      background: #ecfdf5;
+      color: var(--success);
+      border: 1px solid #a7f3d0;
+    }
+
+    /* Diagnostics Table */
+    .diag-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
+      font-size: 0.88rem;
+    }
+
+    .diag-table th, .diag-table td {
+      padding: 0.65rem 0.85rem;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+
+    .diag-table th {
+      background: #faf7f2;
+      color: var(--primary-dark);
+      font-weight: 700;
+    }
+
+    .http-badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: monospace;
+    }
+
+    .http-200 {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #86efac;
+    }
+
+    .http-404 {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fca5a5;
+    }
+
+    .http-checking {
+      background: #fef3c7;
+      color: #b45309;
+    }
+
+    /* Interactive Section */
+    .dual-input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-top: 1rem;
+    }
+
+    @media (max-width: 768px) {
+      .dual-input-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .input-card {
+      background: #fcfbfa;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+
+    .input-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      border-bottom: 1px dashed var(--border);
+      padding-bottom: 0.5rem;
+    }
+
+    .editable-box {
+      min-height: 90px;
+      font-size: 1.8rem;
+      line-height: 1.6;
+      outline: none;
+      word-break: break-all;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.75rem;
+    }
+
+    .editable-box:focus {
+      border-color: var(--primary);
+    }
+
+    /* Real-Time Shard Inspector */
+    .inspector-panel {
+      background: var(--code-bg);
+      color: var(--code-text);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.82rem;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+
+    .inspector-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      gap: 0.5rem;
+    }
+
+    .tag-gf {
+      color: #38bdf8;
+      font-weight: 700;
+    }
+
+    .tag-tail {
+      color: #f472b6;
+      font-weight: 700;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-align: center;
+    }
+
+    footer a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Access bar -->
+  <div class="top-bar">
+    <div class="container">
+      <span>::: 中華民國數位發展部 (moda) 開放資料 &bull; CNS11643 全字庫</span>
+      <div>
+        <a href="https://data.gov.tw/dataset/5961" target="_blank" rel="noopener">政府資料開放平臺</a> &bull;
+        <a href="https://www.cns11643.gov.tw" target="_blank" rel="noopener">全字庫官網</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header Banner -->
+  <header class="official-header">
+    <div class="container header-content">
+      <div>
+        <div class="brand-title">
+          全字庫 CNS11643
+          <span class="seal-badge">Web Font CDN</span>
+        </div>
+        <div class="brand-sub">
+          官方全字庫正宋體 (TW-Sung) 與正楷體 (TW-Kai) 雲端按需分片字體展示
+        </div>
+      </div>
+      <div class="header-links">
+        <a href="https://github.com/IvanaGyro/cns11643-webfonts" target="_blank" rel="noopener">
+          GitHub 專案原始碼
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Notice -->
+    <div class="notice-card">
+      <strong>為什麼需要全字庫 Web Font？</strong><br>
+      Windows 預設「標楷體」與「新細明體」僅覆蓋常用 Big5 範圍，在 <strong>CJK Extension B</strong>（第二字面難字）與 <strong>第十五字面造字區（PUA 戶政專用字）</strong> 會直接顯示空白或豆腐塊（<code>□</code>）。全字庫 Web Font CDN 將全字庫龐大的八萬多漢字切分為小於 30KB 的微型分片，瀏覽器只下載當前頁面用到的字，載入迅速且完全補齊難字！
+    </div>
+
+    <!-- Controls Panel -->
+    <div class="toolbar-panel">
+      <div class="control-item">
+        <span class="control-label">CDN 版本：</span>
+        <select id="sel-version">
+          <option value="20260805.1.0" selected>20260805.1.0 (最新發布版)</option>
+          <option value="20260805.0.0">20260805.0.0</option>
+          <option value="latest">latest</option>
+        </select>
+      </div>
+
+      <div class="control-item">
+        <span class="control-label">字體大小：</span>
+        <input type="range" id="rng-size" min="18" max="56" value="32">
+        <span id="txt-size" style="font-weight: 700; min-width: 42px;">32px</span>
+      </div>
+
+      <label class="cache-toggle" title="開啟時測試請求將加上時間戳並禁止快取，以獲取真實網路下載時間與檔案大小">
+        <input type="checkbox" id="chk-nocache" checked>
+        <span>🚫 禁止瀏覽器快取 (每次重新下載測速)</span>
+      </label>
+
+      <div style="margin-left: auto; display: flex; gap: 0.5rem;">
+        <button class="btn" id="btn-run-diag">
+          ⚡ 執行 CDN 與分片測速
+        </button>
+      </div>
+    </div>
+
+    <!-- Section 1: Comparison Table -->
+    <section class="section-card">
+      <div class="section-title">
+        <span>1. 標楷體 / 新細明體 缺字 vs. 全字庫補全對照表</span>
+        <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">
+          比對 Windows 系統預設字體缺字情況
+        </span>
+      </div>
+
+      <div class="table-container">
+        <table class="cns-table">
+          <thead>
+            <tr>
+              <th class="col-meta">難字名稱 / 編碼</th>
+              <th>Windows 標楷體<br><small style="color: var(--text-muted); font-weight: normal;">(DFKai-SB)</small></th>
+              <th style="color: var(--primary);">全字庫正楷體<br><small style="color: var(--primary); font-weight: normal;">TW-Kai (CDN)</small></th>
+              <th>Windows 新細明體<br><small style="color: var(--text-muted); font-weight: normal;">(PMingLiU)</small></th>
+              <th style="color: var(--primary);">全字庫正宋體<br><small style="color: var(--primary); font-weight: normal;">TW-Sung (CDN)</small></th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- 𠮷 -->
+            <tr>
+              <td class="col-meta">
+                <div class="char-name">𠮷</div>
+                <div class="char-code">U+20BB7 &bull; Ext-B</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">吉野家「𠮷」(土吉)<br>戶政常用姓名難字</div>
+              </td>
+              <td class="glyph-display sys-kai">𠮷<br><span class="badge-pill badge-fail">標楷體缺字</span></td>
+              <td class="glyph-display tw-kai">𠮷<br><span class="badge-pill badge-ok">正楷體支援</span></td>
+              <td class="glyph-display sys-ming">𠮷<br><span class="badge-pill badge-fail">新細明缺字</span></td>
+              <td class="glyph-display tw-sung">𠮷<br><span class="badge-pill badge-ok">正宋體支援</span></td>
+            </tr>
+
+            <!-- 𡘙 -->
+            <tr>
+              <td class="col-meta">
+                <div class="char-name">𡘙</div>
+                <div class="char-code">U+21619 &bull; Ext-B</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">三個大疊字<br>音 ㄊㄞˋ (泰古字)</div>
+              </td>
+              <td class="glyph-display sys-kai">𡘙<br><span class="badge-pill badge-fail">標楷體缺字</span></td>
+              <td class="glyph-display tw-kai">𡘙<br><span class="badge-pill badge-ok">正楷體支援</span></td>
+              <td class="glyph-display sys-ming">𡘙<br><span class="badge-pill badge-fail">新細明缺字</span></td>
+              <td class="glyph-display tw-sung">𡘙<br><span class="badge-pill badge-ok">正宋體支援</span></td>
+            </tr>
+
+            <!-- 𪚥 -->
+            <tr>
+              <td class="col-meta">
+                <div class="char-name">𪚥</div>
+                <div class="char-code">U+2A6A5 &bull; Ext-B</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">四個龍疊字 (64畫)<br>音 ㄓㄜˊ (多言也)</div>
+              </td>
+              <td class="glyph-display sys-kai">𪚥<br><span class="badge-pill badge-fail">標楷體缺字</span></td>
+              <td class="glyph-display tw-kai">𪚥<br><span class="badge-pill badge-ok">正楷體支援</span></td>
+              <td class="glyph-display sys-ming">𪚥<br><span class="badge-pill badge-fail">新細明缺字</span></td>
+              <td class="glyph-display tw-sung">𪚥<br><span class="badge-pill badge-ok">正宋體支援</span></td>
+            </tr>
+
+            <!-- 𨑨 -->
+            <tr>
+              <td class="col-meta">
+                <div class="char-name">𨑨</div>
+                <div class="char-code">U+28468 &bull; Ext-B</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">臺語「𨑨迌」之𨑨<br>(chhit-thô，遊玩)</div>
+              </td>
+              <td class="glyph-display sys-kai">𨑨<br><span class="badge-pill badge-fail">標楷體缺字</span></td>
+              <td class="glyph-display tw-kai">𨑨<br><span class="badge-pill badge-ok">正楷體支援</span></td>
+              <td class="glyph-display sys-ming">𨑨<br><span class="badge-pill badge-fail">新細明缺字</span></td>
+              <td class="glyph-display tw-sung">𨑨<br><span class="badge-pill badge-ok">正宋體支援</span></td>
+            </tr>
+
+            <!-- 𠀾 -->
+            <tr>
+              <td class="col-meta">
+                <div class="char-name">𠀾</div>
+                <div class="char-code">U+2003E &bull; Ext-B</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">第二字面罕見字<br>CNS 2-2129</div>
+              </td>
+              <td class="glyph-display sys-kai">𠀾<br><span class="badge-pill badge-fail">標楷體缺字</span></td>
+              <td class="glyph-display tw-kai">𠀾<br><span class="badge-pill badge-ok">正楷體支援</span></td>
+              <td class="glyph-display sys-ming">𠀾<br><span class="badge-pill badge-fail">新細明缺字</span></td>
+              <td class="glyph-display tw-sung">𠀾<br><span class="badge-pill badge-ok">正宋體支援</span></td>
+            </tr>
+
+            <!-- 󰀀 -->
+            <tr>
+              <td class="col-meta">
+                <div class="char-name">󰀀</div>
+                <div class="char-code">U+F0000 &bull; Plane 15</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">第15字面戶政造字 1<br>CNS 15-2121</div>
+              </td>
+              <td class="glyph-display sys-kai">󰀀<br><span class="badge-pill badge-fail">系統完全缺字</span></td>
+              <td class="glyph-display tw-kai">󰀀<br><span class="badge-pill badge-ok">全字庫造字支援</span></td>
+              <td class="glyph-display sys-ming">󰀀<br><span class="badge-pill badge-fail">系統完全缺字</span></td>
+              <td class="glyph-display tw-sung">󰀀<br><span class="badge-pill badge-ok">全字庫造字支援</span></td>
+            </tr>
+
+            <!-- 󰀁 -->
+            <tr>
+              <td class="col-meta">
+                <div class="char-name">󰀁</div>
+                <div class="char-code">U+F0001 &bull; Plane 15</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">第15字面戶政造字 2<br>CNS 15-2122</div>
+              </td>
+              <td class="glyph-display sys-kai">󰀁<br><span class="badge-pill badge-fail">系統完全缺字</span></td>
+              <td class="glyph-display tw-kai">󰀁<br><span class="badge-pill badge-ok">全字庫造字支援</span></td>
+              <td class="glyph-display sys-ming">󰀁<br><span class="badge-pill badge-fail">系統完全缺字</span></td>
+              <td class="glyph-display tw-sung">󰀁<br><span class="badge-pill badge-ok">全字庫造字支援</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section 2: Interactive Text Input -->
+    <section class="section-card">
+      <div class="section-title">
+        <span>2. 即時段落渲染比對 (可自由鍵入或貼上文字)</span>
+        <button class="btn btn-outline" style="font-size: 0.8rem; padding: 0.25rem 0.6rem;" id="btn-copy-sample">
+          填入罕見字範例句
+        </button>
+      </div>
+
+      <div class="dual-input-grid">
+        <div class="input-card">
+          <div class="input-header">
+            <span>全字庫正楷體 (TW-Kai via jsDelivr CDN)</span>
+            <span class="badge-pill badge-ok">書法楷書 & 罕用字支援</span>
+          </div>
+          <div class="editable-box tw-kai dynamic-font" contenteditable="true" id="box-tw-kai" spellcheck="false">
+            吉野家的「𠮷」字、古文之「𡘙」、多言之「𪚥」，以及臺語「𨑨迌」，在全字庫正楷體均可完美顯示。
+          </div>
+        </div>
+
+        <div class="input-card">
+          <div class="input-header">
+            <span>Windows 預設 標楷體 (DFKai-SB)</span>
+            <span class="badge-pill badge-fail">難字缺字或割裂降級</span>
+          </div>
+          <div class="editable-box sys-kai dynamic-font" contenteditable="true" id="box-sys-kai" spellcheck="false">
+            吉野家的「𠮷」字、古文之「𡘙」、多言之「𪚥」，以及臺語「𨑨迌」，在全字庫正楷體均可完美顯示。
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: CDN Diagnostics (Status, Size, Latency) -->
+    <section class="section-card">
+      <div class="section-title">
+        <span>3. CDN 端點檢測 (HTTP 狀態、檔案大小、下載耗時)</span>
+        <span id="diag-summary-badge" class="badge-pill badge-ok" style="font-size: 0.8rem;">Ready</span>
+      </div>
+
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+        即時檢測 jsDelivr CDN 節點交付狀態。勾選「禁止快取」時每次點擊均直接重新經由網際網路下載並量測延遲與大小：
+      </p>
+
+      <div class="table-container">
+        <table class="diag-table">
+          <thead>
+            <tr>
+              <th>資源類型</th>
+              <th>CDN 資源 URL</th>
+              <th>HTTP 狀態</th>
+              <th>下載大小</th>
+              <th>網路延遲</th>
+            </tr>
+          </thead>
+          <tbody id="diag-tbody">
+            <tr>
+              <td colspan="5" style="color: var(--text-muted); text-align: center; padding: 1.5rem;">
+                點擊「⚡ 執行 CDN 與分片測速」開始量測...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section 4: Live Shard Performance Inspector -->
+    <section class="section-card">
+      <div class="section-title">
+        <span>4. 瀏覽器按需下載之 WOFF2 分片監控</span>
+        <span id="shard-counter-badge" class="badge-pill badge-ok">0 個分片載入</span>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+        透過瀏覽器 <code>PerformanceObserver</code> 即時擷取字體分片，精確展示僅下載當前頁面所需之字體切片：
+      </p>
+      <div class="inspector-panel" id="inspector-log">
+        <!-- Live log entries -->
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>
+        中華民國數位發展部 (Ministry of Digital Affairs) &bull; CNS11643 中文標準交換碼全字庫
+      </p>
+      <p style="margin-top: 0.25rem;">
+        字體軟體授權：<a href="https://scripts.sil.org/OFL" target="_blank" rel="noopener">SIL Open Font License 1.1</a> &bull;
+        開源建置工具：<a href="https://github.com/IvanaGyro/cns11643-webfonts" target="_blank" rel="noopener">cns11643-webfonts</a>
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    const scope = "@ivanagyro";
+    const loadedShards = new Set();
+
+    // Elements
+    const selVersion = document.getElementById("sel-version");
+    const rngSize = document.getElementById("rng-size");
+    const txtSize = document.getElementById("txt-size");
+    const chkNocache = document.getElementById("chk-nocache");
+    const btnRunDiag = document.getElementById("btn-run-diag");
+    const diagTbody = document.getElementById("diag-tbody");
+    const diagSummaryBadge = document.getElementById("diag-summary-badge");
+    const inspectorLog = document.getElementById("inspector-log");
+    const shardCounterBadge = document.getElementById("shard-counter-badge");
+    const boxTwKai = document.getElementById("box-tw-kai");
+    const boxSysKai = document.getElementById("box-sys-kai");
+
+    // Two-way sync for interactive editable boxes
+    boxTwKai.addEventListener("input", () => {
+      boxSysKai.textContent = boxTwKai.textContent;
+    });
+    boxSysKai.addEventListener("input", () => {
+      boxTwKai.textContent = boxSysKai.textContent;
+    });
+
+    // Font size slider
+    rngSize.addEventListener("input", (e) => {
+      const sz = e.target.value + "px";
+      txtSize.textContent = sz;
+      document.querySelectorAll(".dynamic-font").forEach(el => el.style.fontSize = sz);
+    });
+
+    // Sample sentence insertion
+    document.getElementById("btn-copy-sample").addEventListener("click", () => {
+      const sample = "吉野家的「𠮷」字、古文之「𡘙」、多言之「𪚥」，以及臺語「𨑨迌」，在全字庫正楷體均可完美顯示。";
+      boxTwKai.textContent = sample;
+      boxSysKai.textContent = sample;
+    });
+
+    // Version switcher
+    selVersion.addEventListener("change", () => {
+      const ver = selVersion.value;
+      const bust = chkNocache.checked ? `?_t=${Date.now()}` : "";
+      document.getElementById("css-sung").href = `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/tw-sung.css${bust}`;
+      document.getElementById("css-kai").href = `https://cdn.jsdelivr.net/npm/${scope}/tw-kai@${ver}/tw-kai.css${bust}`;
+      runDiagnostics();
+    });
+
+    // Real-Time Resource Observer for WOFF2
+    function logResource(entry) {
+      if (!entry.name.includes(".woff2")) return;
+      const url = new URL(entry.name);
+      const filename = url.pathname.split("/").pop();
+      if (loadedShards.has(filename)) return;
+
+      loadedShards.add(filename);
+      const row = document.createElement("div");
+      row.className = "inspector-row";
+
+      const isTail = filename.startsWith("tail-");
+      const tagText = isTail ? "[CNS Rare Tail 分片]" : "[Google TC 常用分片]";
+      const tagClass = isTail ? "tag-tail" : "tag-gf";
+
+      // File size if reported by Resource Timing API
+      const sizeBytes = entry.encodedBodySize || entry.transferSize || 0;
+      const sizeStr = sizeBytes > 0 ? `${(sizeBytes / 1024).toFixed(1)} KB` : "按需載入";
+
+      row.innerHTML = `
+        <span><strong class="${tagClass}">${tagText}</strong> ${filename}</span>
+        <span style="color: #94a3b8;">${sizeStr} &bull; ${Math.round(entry.duration)}ms &bull; ${url.hostname}</span>
+      `;
+      inspectorLog.prepend(row);
+      shardCounterBadge.textContent = `${loadedShards.size} 個分片載入`;
+    }
+
+    new PerformanceObserver((list) => {
+      list.getEntries().forEach(logResource);
+    }).observe({ entryTypes: ["resource"] });
+    performance.getEntriesByType("resource").forEach(logResource);
+
+    // Diagnostics function: tests endpoints, forces cache-bust when checked, measures latency & size
+    async function testEndpoint(name, url, nocache) {
+      const targetUrl = nocache ? `${url}${url.includes('?') ? '&' : '?'}_t=${Date.now()}` : url;
+      const t0 = performance.now();
+      try {
+        const fetchOptions = {
+          method: "GET",
+          headers: nocache ? { "Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache" } : {},
+          cache: nocache ? "no-store" : "default"
+        };
+        const res = await fetch(targetUrl, fetchOptions);
+        const latency = Math.round(performance.now() - t0);
+        const blob = await res.blob();
+        const sizeKb = (blob.size / 1024).toFixed(1);
+
+        return {
+          name,
+          url,
+          ok: res.ok,
+          status: res.status,
+          latency: `${latency} ms`,
+          size: `${sizeKb} KB`
+        };
+      } catch (err) {
+        return {
+          name,
+          url,
+          ok: false,
+          status: "Error",
+          latency: "-",
+          size: "-"
+        };
+      }
+    }
+
+    async function runDiagnostics() {
+      const ver = selVersion.value;
+      const nocache = chkNocache.checked;
+
+      diagSummaryBadge.className = "badge-pill http-checking";
+      diagSummaryBadge.textContent = "檢測中...";
+      diagTbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">正在自 jsDelivr 節點量測 (${nocache ? '禁止快取模式' : '快取模式'})...</td></tr>`;
+
+      const endpoints = [
+        { name: "TW-Sung 主樣式表 (CSS)", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/tw-sung.css` },
+        { name: "TW-Kai 主樣式表 (CSS)", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-kai@${ver}/tw-kai.css` },
+        { name: "常用分片 gf-007-core (WOFF2)", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/woff2/gf-007-core.woff2` },
+        { name: "Ext-B 分片 gf-001-extb (WOFF2)", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/woff2/gf-001-extb.woff2` },
+        { name: "難字「𠮷」分片 tail-0201-extb (WOFF2)", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/woff2/tail-0201-extb.woff2` },
+        { name: "難字「𪚥」分片 tail-0495-extb (WOFF2)", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/woff2/tail-0495-extb.woff2` },
+        { name: "戶政造字「󰀀」分片 tail-0545-plus (WOFF2)", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/woff2/tail-0545-plus.woff2` },
+      ];
+
+      let allOk = true;
+      let rows = "";
+
+      for (const ep of endpoints) {
+        const res = await testEndpoint(ep.name, ep.url, nocache);
+        if (!res.ok) allOk = false;
+
+        const badgeClass = res.ok ? "http-200" : "http-404";
+        rows += `
+          <tr>
+            <td><strong>${res.name}</strong></td>
+            <td><a href="${res.url}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: none; font-family: monospace; font-size: 0.8rem;">${res.url.split('/').pop()}</a></td>
+            <td><span class="http-badge ${badgeClass}">HTTP ${res.status}</span></td>
+            <td><strong>${res.size}</strong></td>
+            <td style="color: var(--accent); font-weight: 700;">${res.latency}</td>
+          </tr>
+        `;
+      }
+
+      diagTbody.innerHTML = rows;
+      diagSummaryBadge.className = allOk ? "badge-pill badge-ok" : "badge-pill badge-fail";
+      diagSummaryBadge.textContent = allOk ? "全部端點正常 (HTTP 200 OK)" : "部分端點異常";
+    }
+
+    btnRunDiag.addEventListener("click", runDiagnostics);
+
+    // Auto-run diagnostics on initial page load
+    runDiagnostics();
+  </script>
+</body>
+</html>
