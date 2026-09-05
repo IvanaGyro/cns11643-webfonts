@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CNS11643 Web Font CDN Verification & Rare Character Showcase</title>
+
+  <!-- Default jsDelivr CDN stylesheets for TW-Sung and TW-Kai -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ivanagyro/tw-sung@20260805.0.0/tw-sung.css" id="sung-css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ivanagyro/tw-kai@20260805.0.0/tw-kai.css" id="kai-css">
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --code-bg: #090d16;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 1.5rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      border-radius: 9999px;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+    }
+
+    .badge-cdn {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .badge-status-ok {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-status-wait {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--warning);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    }
+
+    .card h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 1rem 1.25rem;
+      border-radius: 12px;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .toolbar label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input[type="text"], select {
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    input[type="text"]:focus, select:focus {
+      border-color: var(--primary);
+    }
+
+    input[type="range"] {
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
+    button.btn {
+      background: var(--primary);
+      color: #0f172a;
+      font-weight: 700;
+      border: none;
+      padding: 0.45rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    button.btn:hover {
+      background: var(--primary-hover);
+    }
+
+    /* Comparison grid */
+    .font-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .font-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .font-box {
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+
+    .font-box-header {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .font-preview {
+      outline: none;
+      word-break: break-all;
+      min-height: 90px;
+    }
+
+    /* Applied font families */
+    .tw-sung {
+      font-family: "TW-Sung", serif;
+    }
+
+    .tw-kai {
+      font-family: "TW-Kai", serif;
+    }
+
+    /* Rare char cards */
+    .char-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .char-card {
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .char-glyph-pair {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      margin: 0.5rem 0;
+      padding: 0.5rem 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .char-glyph {
+      font-size: 2.75rem;
+      line-height: 1;
+    }
+
+    .char-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .char-codepoint {
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      color: var(--primary);
+      font-size: 0.75rem;
+    }
+
+    /* CDN Diagnostic Table */
+    .status-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin-top: 0.75rem;
+    }
+
+    .status-table th, .status-table td {
+      padding: 0.6rem 0.8rem;
+      text-align: left;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .status-table th {
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Network shards log */
+    .shards-log {
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.8rem;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .log-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.25rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .log-tag-gf {
+      color: #38bdf8;
+    }
+
+    .log-tag-tail {
+      color: #f472b6;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>
+        CNS11643 Web Font CDN Checker
+        <span class="badge badge-cdn">jsDelivr CDN</span>
+      </h1>
+      <p style="color: var(--text-muted); margin-top: 0.25rem;">
+        Testing live CDN delivery, Google TC Slicing & CNS Rare-Character Tail Shards for
+        <strong>全字庫正宋體 (TW-Sung)</strong> & <strong>全字庫正楷體 (TW-Kai)</strong>.
+      </p>
+    </header>
+
+    <!-- Controls Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <label for="cdn-version">CDN Version:</label>
+        <select id="cdn-version">
+          <option value="20260805.0.0" selected>20260805.0.0 (Release 0)</option>
+          <option value="20260805.1.0">20260805.1.0 (Release 1)</option>
+          <option value="latest">latest</option>
+        </select>
+      </div>
+
+      <div class="toolbar-group">
+        <label for="font-size">Size:</label>
+        <input type="range" id="font-size" min="18" max="64" value="32">
+        <span id="font-size-val" style="min-width: 45px; font-weight: 600;">32px</span>
+      </div>
+
+      <div class="toolbar-group" style="margin-left: auto;">
+        <button class="btn" id="btn-check-cdn">Run CDN Check</button>
+      </div>
+    </div>
+
+    <!-- Section 1: CDN Status & Diagnostic -->
+    <div class="card">
+      <h2>
+        1. CDN Connectivity & Diagnostics
+        <span id="diagnostic-summary" class="badge badge-status-ok">Checking...</span>
+      </h2>
+      <table class="status-table">
+        <thead>
+          <tr>
+            <th>Asset</th>
+            <th>URL</th>
+            <th>HTTP Status</th>
+            <th>Size</th>
+            <th>Latency</th>
+          </tr>
+        </thead>
+        <tbody id="diagnostic-body">
+          <tr><td colspan="5" style="color: var(--text-muted);">Click "Run CDN Check" to test endpoints...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Section 2: Interactive Custom Text Comparison -->
+    <div class="card">
+      <h2>2. Live Dual-Font Text Input (Type Anything)</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+        Editable boxes below render in real time. Notice that entering characters triggers on-demand browser shard downloads!
+      </p>
+
+      <div class="font-grid">
+        <div class="font-box">
+          <div class="font-box-header">
+            <strong>全字庫正宋體 (TW-Sung)</strong>
+            <span>CSS: <code>font-family: "TW-Sung", serif;</code></span>
+          </div>
+          <div class="font-preview tw-sung dynamic-preview" contenteditable="true" spellcheck="false">
+            天地玄黃，宇宙洪荒。中華民國數位發展部 CNS11643 全字庫正宋體測試。
+          </div>
+        </div>
+
+        <div class="font-box">
+          <div class="font-box-header">
+            <strong>全字庫正楷體 (TW-Kai)</strong>
+            <span>CSS: <code>font-family: "TW-Kai", serif;</code></span>
+          </div>
+          <div class="font-preview tw-kai dynamic-preview" contenteditable="true" spellcheck="false">
+            天地玄黃，宇宙洪荒。中華民國數位發展部 CNS11643 全字庫正楷體測試。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Rare Characters Showcase -->
+    <div class="card">
+      <h2>3. 罕見字／難字／第二字面測試 (Rare Characters & Ext-B)</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">
+        These glyphs do not exist in standard system fonts or common subsets, but are fully resolved through CNS tail shards.
+      </p>
+
+      <div class="char-card-grid">
+        <!-- 𠮷 -->
+        <div class="char-card">
+          <div class="char-desc">吉野家「𠮷」(土吉)</div>
+          <div class="char-codepoint">U+20BB7 (Ext-B)</div>
+          <div class="char-glyph-pair">
+            <div>
+              <div class="char-glyph tw-sung">𠮷</div>
+              <small style="color: var(--text-muted);">宋體</small>
+            </div>
+            <div>
+              <div class="char-glyph tw-kai">𠮷</div>
+              <small style="color: var(--text-muted);">楷體</small>
+            </div>
+          </div>
+          <div class="char-desc">戶政與姓名常用難字</div>
+        </div>
+
+        <!-- 𡘙 -->
+        <div class="char-card">
+          <div class="char-desc">三個大疊字「𡘙」</div>
+          <div class="char-codepoint">U+21619 (Ext-B)</div>
+          <div class="char-glyph-pair">
+            <div>
+              <div class="char-glyph tw-sung">𡘙</div>
+              <small style="color: var(--text-muted);">宋體</small>
+            </div>
+            <div>
+              <div class="char-glyph tw-kai">𡘙</div>
+              <small style="color: var(--text-muted);">楷體</small>
+            </div>
+          </div>
+          <div class="char-desc">音ㄊㄞˋ (泰古字)</div>
+        </div>
+
+        <!-- 𪚥 -->
+        <div class="char-card">
+          <div class="char-desc">四個龍「𪚥」(64畫)</div>
+          <div class="char-codepoint">U+2A6A5 (Ext-B)</div>
+          <div class="char-glyph-pair">
+            <div>
+              <div class="char-glyph tw-sung">𪚥</div>
+              <small style="color: var(--text-muted);">宋體</small>
+            </div>
+            <div>
+              <div class="char-glyph tw-kai">𪚥</div>
+              <small style="color: var(--text-muted);">楷體</small>
+            </div>
+          </div>
+          <div class="char-desc">音ㄓㄜˊ (多言也)</div>
+        </div>
+
+        <!-- 𨑨 -->
+        <div class="char-card">
+          <div class="char-desc">臺語「𨑨迌」</div>
+          <div class="char-codepoint">U+28468 (Ext-B)</div>
+          <div class="char-glyph-pair">
+            <div>
+              <div class="char-glyph tw-sung">𨑨</div>
+              <small style="color: var(--text-muted);">宋體</small>
+            </div>
+            <div>
+              <div class="char-glyph tw-kai">𨑨</div>
+              <small style="color: var(--text-muted);">楷體</small>
+            </div>
+          </div>
+          <div class="char-desc">遊玩 (chhit-thô)</div>
+        </div>
+
+        <!-- 堃 -->
+        <div class="char-card">
+          <div class="char-desc">人名常見「堃」</div>
+          <div class="char-codepoint">U+5803 (Ext-A)</div>
+          <div class="char-glyph-pair">
+            <div>
+              <div class="char-glyph tw-sung">堃</div>
+              <small style="color: var(--text-muted);">宋體</small>
+            </div>
+            <div>
+              <div class="char-glyph tw-kai">堃</div>
+              <small style="color: var(--text-muted);">楷體</small>
+            </div>
+          </div>
+          <div class="char-desc">方言字／坤之異體</div>
+        </div>
+
+        <!-- 煊 -->
+        <div class="char-card">
+          <div class="char-desc">人名常見「煊」</div>
+          <div class="char-codepoint">U+714A</div>
+          <div class="char-glyph-pair">
+            <div>
+              <div class="char-glyph tw-sung">煊</div>
+              <small style="color: var(--text-muted);">宋體</small>
+            </div>
+            <div>
+              <div class="char-glyph tw-kai">煊</div>
+              <small style="color: var(--text-muted);">楷體</small>
+            </div>
+          </div>
+          <div class="char-desc">光明盛大</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4: Live Network Shard Inspector -->
+    <div class="card">
+      <h2>
+        4. Live Downloaded WOFF2 Shards Inspector
+        <span class="badge badge-cdn" id="shard-count-badge">0 Shards Loaded</span>
+      </h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.75rem;">
+        Browser dynamically fetches only the specific <code>.woff2</code> shards containing the characters on this page.
+      </p>
+      <div class="shards-log" id="shards-log">
+        <!-- Live log items -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const scope = "@ivanagyro";
+    const requestedShards = new Set();
+
+    // Font size control
+    const sizeSlider = document.getElementById("font-size");
+    const sizeVal = document.getElementById("font-size-val");
+    const previews = document.querySelectorAll(".dynamic-preview");
+
+    sizeSlider.addEventListener("input", (e) => {
+      const sz = e.target.value + "px";
+      sizeVal.textContent = sz;
+      previews.forEach(p => p.style.fontSize = sz);
+    });
+
+    // Version switcher
+    const versionSelect = document.getElementById("cdn-version");
+    function updateStylesheets(ver) {
+      document.getElementById("sung-css").href = `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/tw-sung.css`;
+      document.getElementById("kai-css").href = `https://cdn.jsdelivr.net/npm/${scope}/tw-kai@${ver}/tw-kai.css`;
+      runDiagnostic(ver);
+    }
+    versionSelect.addEventListener("change", (e) => updateStylesheets(e.target.value));
+
+    // Performance Observer for live WOFF2 shards
+    function logResource(entry) {
+      if (!entry.name.includes(".woff2")) return;
+      const url = new URL(entry.name);
+      const filename = url.pathname.split("/").pop();
+      if (requestedShards.has(filename)) return;
+
+      requestedShards.add(filename);
+      const container = document.getElementById("shards-log");
+      const row = document.createElement("div");
+      row.className = "log-row";
+
+      const isGf = filename.startsWith("gf-");
+      const tagClass = isGf ? "log-tag-gf" : "log-tag-tail";
+      const tag = isGf ? "[Google Slice]" : "[CNS Tail]";
+
+      row.innerHTML = `
+        <span><strong class="${tagClass}">${tag}</strong> ${filename}</span>
+        <span style="color: var(--text-muted);">${Math.round(entry.duration)}ms &bull; ${url.hostname}</span>
+      `;
+      container.prepend(row);
+      document.getElementById("shard-count-badge").textContent = `${requestedShards.size} Shards Loaded`;
+    }
+
+    const observer = new PerformanceObserver((list) => {
+      list.getEntries().forEach(logResource);
+    });
+    observer.observe({ entryTypes: ["resource"] });
+    performance.getEntriesByType("resource").forEach(logResource);
+
+    // CDN Diagnostic Checker
+    async function checkEndpoint(url) {
+      const t0 = performance.now();
+      try {
+        const res = await fetch(url, { method: "HEAD", cache: "no-cache" });
+        const latency = Math.round(performance.now() - t0);
+        const cl = res.headers.get("content-length");
+        const sizeStr = cl ? `${(parseInt(cl) / 1024).toFixed(1)} KB` : "chunked";
+        return { ok: res.ok, status: res.status, latency, size: sizeStr };
+      } catch (e) {
+        return { ok: false, status: "Error", latency: "-", size: "-" };
+      }
+    }
+
+    async function runDiagnostic(ver = versionSelect.value) {
+      const tbody = document.getElementById("diagnostic-body");
+      const summary = document.getElementById("diagnostic-summary");
+      tbody.innerHTML = `<tr><td colspan="5" style="color: var(--text-muted);">Testing CDN endpoints for version ${ver}...</td></tr>`;
+
+      const endpoints = [
+        { name: "TW-Sung CSS", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/tw-sung.css` },
+        { name: "TW-Kai CSS",  url: `https://cdn.jsdelivr.net/npm/${scope}/tw-kai@${ver}/tw-kai.css` },
+        { name: "TW-Sung WOFF2 (gf-core-001)", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/woff2/gf-core-001.woff2` },
+        { name: "TW-Kai WOFF2 (gf-core-001)",  url: `https://cdn.jsdelivr.net/npm/${scope}/tw-kai@${ver}/woff2/gf-core-001.woff2` },
+      ];
+
+      let allOk = true;
+      let rowsHtml = "";
+
+      for (const ep of endpoints) {
+        const result = await checkEndpoint(ep.url);
+        if (!result.ok) allOk = false;
+        const statusBadge = result.ok
+          ? `<span class="badge badge-status-ok">HTTP ${result.status}</span>`
+          : `<span class="badge badge-status-wait">${result.status}</span>`;
+
+        rowsHtml += `
+          <tr>
+            <td><strong>${ep.name}</strong></td>
+            <td><a href="${ep.url}" target="_blank" style="color: var(--primary); font-size: 0.8rem; text-decoration: none;">${ep.url}</a></td>
+            <td>${statusBadge}</td>
+            <td>${result.size}</td>
+            <td>${result.latency} ms</td>
+          </tr>
+        `;
+      }
+
+      tbody.innerHTML = rowsHtml;
+      summary.className = allOk ? "badge badge-status-ok" : "badge badge-status-wait";
+      summary.textContent = allOk ? "All Endpoints Live (HTTP 200)" : "Propagation Pending";
+    }
+
+    document.getElementById("btn-check-cdn").addEventListener("click", () => runDiagnostic());
+    // Auto-run on load
+    runDiagnostic();
+  </script>
+</body>
+</html>
