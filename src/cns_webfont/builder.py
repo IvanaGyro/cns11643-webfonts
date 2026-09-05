@@ -334,6 +334,9 @@ def build_font_package(
         "bugs": {
             "url": f"https://github.com/{repo_slug}/issues",
         },
+        "publishConfig": {
+            "access": "public",
+        },
         "style": f"./{pkg_slug}.css",
         "files": [
             f"{pkg_slug}.css",

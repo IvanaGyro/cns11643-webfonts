@@ -11,6 +11,11 @@ on:
         required: false
         default: false
         type: boolean
+      recipe_revision:
+        description: 'Recipe revision integer (e.g. 0, 1, 2, or auto)'
+        required: false
+        default: 'auto'
+        type: string
 
 concurrency:
   group: cns-webfont-release
@@ -44,10 +49,27 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22.x'
-          registry-url: 'https://registry.npmjs.org'
+
+      - name: Ensure modern npm CLI for Trusted Publishing
+        run: npm install -g npm@latest
+
+      - name: Configure npm authentication (Token vs Trusted Publishing)
+        env:
+          TOKEN: ${{ secrets.NPM_TOKEN || secrets.NODE_AUTH_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo "::notice::NPM_TOKEN / NODE_AUTH_TOKEN is detected. Configuring token-based authentication..."
+            echo "//registry.npmjs.org/:_authToken=${TOKEN}" > ~/.npmrc
+          else
+            echo "::notice::NPM_TOKEN is not set. Using OIDC Trusted Publishing without auth token..."
+            rm -f ~/.npmrc
+          fi
 
       - name: Check upstream version vs npm registry
         id: upstream_check
+        env:
+          INPUT_FORCE_BUILD: ${{ inputs.force_build || 'false' }}
+          INPUT_RECIPE_REVISION: ${{ inputs.recipe_revision || 'auto' }}
         run: |
           set -e
           echo "Checking upstream..."
@@ -61,30 +83,58 @@ jobs:
 
           info = check_upstream()
           print(f'UPSTREAM_VERSION={info.version}')
+
+          input_revision = os.environ.get('INPUT_RECIPE_REVISION', 'auto').strip()
+          force_build = os.environ.get('INPUT_FORCE_BUILD', 'false').lower() == 'true'
+
+          if input_revision and input_revision != 'auto':
+              target_revision = int(input_revision)
+              sung_pub = is_package_published(f'{scope}/tw-sung', info.version, recipe_revision=target_revision)
+              kai_pub = is_package_published(f'{scope}/tw-kai', info.version, recipe_revision=target_revision)
+              needs_build = not (sung_pub and kai_pub) or force_build
+          else:
+              sung_pub = is_package_published(f'{scope}/tw-sung', info.version, recipe_revision=0)
+              kai_pub = is_package_published(f'{scope}/tw-kai', info.version, recipe_revision=0)
+              if not (sung_pub and kai_pub):
+                  target_revision = 0
+                  needs_build = True
+              else:
+                  if force_build:
+                      rev = 1
+                      while is_package_published(f'{scope}/tw-sung', info.version, recipe_revision=rev) and \
+                            is_package_published(f'{scope}/tw-kai', info.version, recipe_revision=rev):
+                          rev += 1
+                      target_revision = rev
+                      needs_build = True
+                  else:
+                      target_revision = 0
+                      needs_build = False
+
+          print(f'TARGET_REVISION={target_revision}')
+          print(f'NEEDS_BUILD={needs_build}')
+
           with open('UPSTREAM_VERSION.txt', 'w') as f:
               f.write(info.version)
-
-          sung_pub = is_package_published(f'{scope}/tw-sung', info.version)
-          kai_pub = is_package_published(f'{scope}/tw-kai', info.version)
-
-          needs_build = not (sung_pub and kai_pub)
-          print(f'NEEDS_BUILD={needs_build}')
+          with open('RECIPE_REVISION.txt', 'w') as f:
+              f.write(str(target_revision))
           with open('NEEDS_BUILD.txt', 'w') as f:
               f.write('true' if needs_build else 'false')
           with open('SCOPE.txt', 'w') as f:
               f.write(scope)
           "
           UPSTREAM_VER=$(cat UPSTREAM_VERSION.txt)
+          RECIPE_REV=$(cat RECIPE_REVISION.txt)
           NEEDS_BUILD=$(cat NEEDS_BUILD.txt)
           RESOLVED_SCOPE=$(cat SCOPE.txt)
           echo "version=${UPSTREAM_VER}" >> $GITHUB_OUTPUT
+          echo "revision=${RECIPE_REV}" >> $GITHUB_OUTPUT
           echo "needs_build=${NEEDS_BUILD}" >> $GITHUB_OUTPUT
           echo "scope=${RESOLVED_SCOPE}" >> $GITHUB_OUTPUT
 
       - name: Early exit if up-to-date
         if: ${{ steps.upstream_check.outputs.needs_build == 'false' && (github.event_name != 'workflow_dispatch' || !inputs.force_build) }}
         run: |
-          echo "All packages are already published and up-to-date with upstream ${{ steps.upstream_check.outputs.version }}. Exiting."
+          echo "All packages are already published and up-to-date with upstream ${{ steps.upstream_check.outputs.version }}.${{ steps.upstream_check.outputs.revision }}.0. Exiting."
           exit 0
 
       - name: Download official font archives
@@ -97,6 +147,7 @@ jobs:
             --sources-dir sources \
             --output-dir packages \
             --upstream-version ${{ steps.upstream_check.outputs.version }} \
+            --recipe-revision ${{ steps.upstream_check.outputs.revision }} \
             --scope "${{ steps.upstream_check.outputs.scope }}" \
             --offline
 
@@ -119,16 +170,12 @@ jobs:
           npx playwright test
 
       - name: Publish TW-Sung to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN || secrets.NODE_AUTH_TOKEN }}
         run: |
           cd packages/tw-sung
           npm publish --access public --provenance
           cd ../..
 
       - name: Publish TW-Kai to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN || secrets.NODE_AUTH_TOKEN }}
         run: |
           cd packages/tw-kai
           npm publish --access public --provenance
@@ -140,15 +187,14 @@ jobs:
           pixi run python -c "
           import time, requests, sys
           scope = '${{ steps.upstream_check.outputs.scope }}'
-          version = '${{ steps.upstream_check.outputs.version }}.0.0'
+          version = '${{ steps.upstream_check.outputs.version }}.${{ steps.upstream_check.outputs.revision }}.0'
           urls = [
               f'https://cdn.jsdelivr.net/npm/{scope}/tw-sung@{version}/tw-sung.css',
               f'https://cdn.jsdelivr.net/npm/{scope}/tw-kai@{version}/tw-kai.css',
           ]
-          # Retry up to 5 times with backoff to allow CDN propagation
           for url in urls:
               print(f'Checking {url}...')
-              for attempt in range(5):
+              for attempt in range(6):
                   try:
                       res = requests.get(url, timeout=10)
                       if res.status_code == 200:
