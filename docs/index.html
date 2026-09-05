@@ -721,50 +721,40 @@
       </div>
     </section>
 
-    <!-- Section 3: CDN Diagnostics (Status, Size, Latency) -->
+    <!-- Section 3: Unified CDN Diagnostics & Live On-Demand Shards -->
     <section class="section-card">
       <div class="section-title">
-        <span>3. CDN 端點檢測 (HTTP 狀態、檔案大小、下載耗時)</span>
-        <span id="diag-summary-badge" class="badge-pill badge-ok" style="font-size: 0.8rem;">Ready</span>
+        <span>3. CDN 端點檢測與按需下載分片監控</span>
+        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+          <span id="diag-summary-badge" class="badge-pill badge-ok">Ready</span>
+          <span id="shard-counter-badge" class="badge-pill badge-ok" style="background: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8;">0 個按需分片載入</span>
+        </div>
       </div>
 
       <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
-        即時檢測 jsDelivr CDN 節點交付狀態。勾選「禁止快取」時每次點擊均直接重新經由網際網路下載並量測延遲與大小：
+        即時檢測 jsDelivr CDN 節點交付狀態，並透過 <code>PerformanceObserver</code> 即時擷取瀏覽器渲染文字時實際自 CDN 按需下載之 WOFF2 字體分片。勾選「禁止快取」時每次點擊均重新自網路下載並量測純網路延遲與檔案大小：
       </p>
 
       <div class="table-container">
         <table class="diag-table">
           <thead>
             <tr>
-              <th>資源類型</th>
+              <th>資源類型 / 分片名稱</th>
+              <th>切片分類</th>
               <th>CDN 資源 URL</th>
               <th>HTTP 狀態</th>
               <th>下載大小</th>
-              <th>網路延遲</th>
+              <th>下載耗時</th>
             </tr>
           </thead>
           <tbody id="diag-tbody">
             <tr>
-              <td colspan="5" style="color: var(--text-muted); text-align: center; padding: 1.5rem;">
+              <td colspan="6" style="color: var(--text-muted); text-align: center; padding: 1.5rem;">
                 點擊「⚡ 執行 CDN 與分片測速」開始量測...
               </td>
             </tr>
           </tbody>
         </table>
-      </div>
-    </section>
-
-    <!-- Section 4: Live Shard Performance Inspector -->
-    <section class="section-card">
-      <div class="section-title">
-        <span>4. 瀏覽器按需下載之 WOFF2 分片監控</span>
-        <span id="shard-counter-badge" class="badge-pill badge-ok">0 個分片載入</span>
-      </div>
-      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
-        透過瀏覽器 <code>PerformanceObserver</code> 即時擷取字體分片，精確展示僅下載當前頁面所需之字體切片：
-      </p>
-      <div class="inspector-panel" id="inspector-log">
-        <!-- Live log entries -->
       </div>
     </section>
   </main>
@@ -829,7 +819,7 @@
       runDiagnostics();
     });
 
-    // Real-Time Resource Observer for WOFF2
+    // Real-Time Resource Observer for WOFF2 (Unified with Section 3 Table)
     function logResource(entry) {
       if (!entry.name.includes(".woff2")) return;
       const url = new URL(entry.name);
@@ -837,23 +827,33 @@
       if (loadedShards.has(filename)) return;
 
       loadedShards.add(filename);
-      const row = document.createElement("div");
-      row.className = "inspector-row";
+      shardCounterBadge.textContent = `${loadedShards.size} 個按需分片載入`;
+
+      // Prevent duplicate row if already listed in table
+      if (document.querySelector(`tr[data-file="${filename}"]`)) return;
 
       const isTail = filename.startsWith("tail-");
-      const tagText = isTail ? "[CNS Rare Tail 分片]" : "[Google TC 常用分片]";
-      const tagClass = isTail ? "tag-tail" : "tag-gf";
+      const isPlus = filename.includes("-plus");
+      const category = isTail ? (isPlus ? "第15字面造字" : "CNS Rare Tail") : "Google TC";
+      const tagStyle = isTail
+        ? "background: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8;"
+        : "background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;";
 
-      // File size if reported by Resource Timing API
       const sizeBytes = entry.encodedBodySize || entry.transferSize || 0;
-      const sizeStr = sizeBytes > 0 ? `${(sizeBytes / 1024).toFixed(1)} KB` : "按需載入";
+      const sizeStr = sizeBytes > 0 ? `${(sizeBytes / 1024).toFixed(1)} KB` : "按需下載";
 
-      row.innerHTML = `
-        <span><strong class="${tagClass}">${tagText}</strong> ${filename}</span>
-        <span style="color: #94a3b8;">${sizeStr} &bull; ${Math.round(entry.duration)}ms &bull; ${url.hostname}</span>
+      const tr = document.createElement("tr");
+      tr.setAttribute("data-file", filename);
+      tr.style.backgroundColor = "rgba(16, 185, 129, 0.04)";
+      tr.innerHTML = `
+        <td><strong>按需載入: ${filename}</strong></td>
+        <td><span class="badge-pill" style="${tagStyle}">${category}</span></td>
+        <td><a href="${entry.name}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: none; font-family: monospace; font-size: 0.8rem;">${filename}</a></td>
+        <td><span class="http-badge http-200">HTTP 200 (已載入)</span></td>
+        <td><strong>${sizeStr}</strong></td>
+        <td style="color: var(--accent); font-weight: 700;">${Math.round(entry.duration)} ms</td>
       `;
-      inspectorLog.prepend(row);
-      shardCounterBadge.textContent = `${loadedShards.size} 個分片載入`;
+      diagTbody.appendChild(tr);
     }
 
     new PerformanceObserver((list) => {
@@ -862,11 +862,10 @@
     performance.getEntriesByType("resource").forEach(logResource);
 
     // Diagnostics function: tests endpoints, forces cache-bust when checked, measures latency & size
-    async function testEndpoint(name, url, nocache) {
+    async function testEndpoint(name, category, tagStyle, url, nocache) {
       const targetUrl = nocache ? `${url}${url.includes('?') ? '&' : '?'}_t=${Date.now()}` : url;
       const t0 = performance.now();
       try {
-        // Use a simple CORS GET request without custom headers to prevent OPTIONS preflight failures
         const res = await fetch(targetUrl, { method: "GET" });
         const latency = Math.round(performance.now() - t0);
         const blob = await res.blob();
@@ -874,7 +873,10 @@
 
         return {
           name,
+          category,
+          tagStyle,
           url,
+          filename: url.split("/").pop(),
           ok: res.ok,
           status: res.status,
           latency: `${latency} ms`,
@@ -883,7 +885,10 @@
       } catch (err) {
         return {
           name,
+          category,
+          tagStyle,
           url,
+          filename: url.split("/").pop(),
           ok: false,
           status: "Error",
           latency: "-",
@@ -898,30 +903,31 @@
 
       diagSummaryBadge.className = "badge-pill http-checking";
       diagSummaryBadge.textContent = "檢測中...";
-      diagTbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">正在自 jsDelivr 節點量測 (${nocache ? '禁止快取模式' : '快取模式'})...</td></tr>`;
+      diagTbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">正在自 jsDelivr 節點量測 (${nocache ? '禁止快取模式' : '快取模式'})...</td></tr>`;
 
       const endpoints = [
-        { name: "TW-Sung 主樣式表 (CSS)", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/tw-sung.css` },
-        { name: "TW-Kai 主樣式表 (CSS)", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-kai@${ver}/tw-kai.css` },
-        { name: "常用分片 gf-007-core (WOFF2)", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/woff2/gf-007-core.woff2` },
-        { name: "Ext-B 分片 gf-001-extb (WOFF2)", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/woff2/gf-001-extb.woff2` },
-        { name: "難字「𠮷」分片 tail-0201-extb (WOFF2)", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/woff2/tail-0201-extb.woff2` },
-        { name: "難字「𪚥」分片 tail-0495-extb (WOFF2)", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/woff2/tail-0495-extb.woff2` },
-        { name: "戶政造字「󰀀」分片 tail-0545-plus (WOFF2)", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/woff2/tail-0545-plus.woff2` },
+        { name: "TW-Sung 主樣式表 (CSS)", category: "核心主表", tagStyle: "background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/tw-sung.css` },
+        { name: "TW-Kai 主樣式表 (CSS)", category: "核心主表", tagStyle: "background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-kai@${ver}/tw-kai.css` },
+        { name: "常用分片 gf-007-core (WOFF2)", category: "Google TC", tagStyle: "background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/woff2/gf-007-core.woff2` },
+        { name: "Ext-B 分片 gf-001-extb (WOFF2)", category: "Google TC", tagStyle: "background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/woff2/gf-001-extb.woff2` },
+        { name: "難字「𠮷」分片 tail-0201-extb (WOFF2)", category: "CNS Rare Tail", tagStyle: "background: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8;", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/woff2/tail-0201-extb.woff2` },
+        { name: "難字「𪚥」分片 tail-0495-extb (WOFF2)", category: "CNS Rare Tail", tagStyle: "background: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8;", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/woff2/tail-0495-extb.woff2` },
+        { name: "戶政造字「󰀀」分片 tail-0545-plus (WOFF2)", category: "第15字面造字", tagStyle: "background: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8;", url: `https://cdn.jsdelivr.net/npm/${scope}/tw-sung@${ver}/woff2/tail-0545-plus.woff2` },
       ];
 
       let allOk = true;
       let rows = "";
 
       for (const ep of endpoints) {
-        const res = await testEndpoint(ep.name, ep.url, nocache);
+        const res = await testEndpoint(ep.name, ep.category, ep.tagStyle, ep.url, nocache);
         if (!res.ok) allOk = false;
 
         const badgeClass = res.ok ? "http-200" : "http-404";
         rows += `
-          <tr>
+          <tr data-file="${res.filename}">
             <td><strong>${res.name}</strong></td>
-            <td><a href="${res.url}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: none; font-family: monospace; font-size: 0.8rem;">${res.url.split('/').pop()}</a></td>
+            <td><span class="badge-pill" style="${res.tagStyle}">${res.category}</span></td>
+            <td><a href="${res.url}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: none; font-family: monospace; font-size: 0.8rem;">${res.filename}</a></td>
             <td><span class="http-badge ${badgeClass}">HTTP ${res.status}</span></td>
             <td><strong>${res.size}</strong></td>
             <td style="color: var(--accent); font-weight: 700;">${res.latency}</td>
@@ -932,6 +938,9 @@
       diagTbody.innerHTML = rows;
       diagSummaryBadge.className = allOk ? "badge-pill badge-ok" : "badge-pill badge-fail";
       diagSummaryBadge.textContent = allOk ? "全部端點正常 (HTTP 200 OK)" : "部分端點異常";
+
+      // Re-trigger performance observer checking for any already-loaded shards
+      performance.getEntriesByType("resource").forEach(logResource);
     }
 
     btnRunDiag.addEventListener("click", runDiagnostics);
