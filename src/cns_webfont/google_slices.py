@@ -119,3 +119,89 @@ def parse_google_slices(file_path: Path) -> list[LogicalSlice]:
         raise GoogleSlicesParsingError(f"No subsets found in {file_path}")
 
     return slices
+
+
+def check_google_slices_update(
+    data_dir: Path = Path("data/google-fonts"),
+    pr_body_path: Path | None = Path("PR_BODY.md"),
+    changed_path: Path | None = Path("CHANGED.txt"),
+    github_token: str | None = None,
+) -> bool:
+    """Check if upstream googlefonts/nam-files has updated slicing strategy.
+
+    Returns True if an update was found and applied, False otherwise.
+    """
+    import json
+    import os
+    import tempfile
+
+    import requests
+
+    pinned_path = data_dir / "traditional-chinese_default.txt"
+    meta_path = data_dir / "metadata.json"
+
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    old_commit = meta.get("commit")
+
+    headers = {"User-Agent": "cns-webfont"}
+    token = github_token or os.environ.get("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    api_url = "https://api.github.com/repos/googlefonts/nam-files/commits/main"
+    r = requests.get(api_url, headers=headers, timeout=15)
+    r.raise_for_status()
+    latest_sha = r.json()["sha"]
+
+    if latest_sha == old_commit:
+        if changed_path:
+            changed_path.write_text("false", encoding="utf-8")
+        return False
+
+    raw_url = (
+        f"https://raw.githubusercontent.com/googlefonts/nam-files/"
+        f"{latest_sha}/slices/traditional-chinese_default.txt"
+    )
+    resp = requests.get(raw_url, timeout=15)
+    resp.raise_for_status()
+    new_text = resp.text
+
+    with tempfile.NamedTemporaryFile("w", delete=False, encoding="utf-8") as tf:
+        tf.write(new_text)
+        temp_path = Path(tf.name)
+
+    try:
+        old_slices = parse_google_slices(pinned_path)
+        new_slices = parse_google_slices(temp_path)
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+    old_cps = {cp for s in old_slices for cp in s.codepoints}
+    new_cps = {cp for s in new_slices for cp in s.codepoints}
+
+    added = len(new_cps - old_cps)
+    removed = len(old_cps - new_cps)
+
+    pinned_path.write_text(new_text, encoding="utf-8")
+    meta["commit"] = latest_sha
+    meta["subsetCount"] = len(new_slices)
+    meta["totalCodepoints"] = len(new_cps)
+    meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
+    summary = "\n".join(
+        [
+            "### Google Traditional Chinese Slicing Update",
+            f"- **Old Commit**: `{old_commit}`",
+            f"- **New Commit**: `{latest_sha}`",
+            f"- **Subsets**: {len(old_slices)} -> {len(new_slices)}",
+            f"- **Total Codepoints**: {len(old_cps)} -> {len(new_cps)} (+{added}, -{removed})",
+            "",
+        ]
+    )
+
+    if pr_body_path:
+        pr_body_path.write_text(summary, encoding="utf-8")
+    if changed_path:
+        changed_path.write_text("true", encoding="utf-8")
+
+    return True

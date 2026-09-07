@@ -75,3 +75,80 @@ def test_empty_subset(tmp_path):
     bad_file.write_text("subsets {\n  # just comments\n}\n", encoding="utf-8")
     with pytest.raises(GoogleSlicesParsingError, match="contains zero codepoints"):
         parse_google_slices(bad_file)
+
+
+def test_check_google_slices_update_up_to_date(tmp_path: Path):
+    """When remote commit matches pinned commit, report no change."""
+    import json
+    from unittest.mock import MagicMock, patch
+
+    from cns_webfont.google_slices import check_google_slices_update
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    meta_path = data_dir / "metadata.json"
+    meta_path.write_text(json.dumps({"commit": "abc1234"}), encoding="utf-8")
+    strat_path = data_dir / "traditional-chinese_default.txt"
+    strat_path.write_text("subsets {\n  codepoints: 65\n}\n", encoding="utf-8")
+
+    pr_body = tmp_path / "PR_BODY.md"
+    changed_file = tmp_path / "CHANGED.txt"
+
+    with patch("requests.get") as mock_get:
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"sha": "abc1234"}
+        mock_get.return_value = mock_resp
+
+        updated = check_google_slices_update(
+            data_dir=data_dir,
+            pr_body_path=pr_body,
+            changed_path=changed_file,
+        )
+
+        assert not updated
+        assert changed_file.read_text(encoding="utf-8") == "false"
+        assert not pr_body.exists()
+
+
+def test_check_google_slices_update_new_commit(tmp_path: Path):
+    """When remote commit is newer, download and update metadata."""
+    import json
+    from unittest.mock import MagicMock, patch
+
+    from cns_webfont.google_slices import check_google_slices_update
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    meta_path = data_dir / "metadata.json"
+    meta_path.write_text(json.dumps({"commit": "old123"}), encoding="utf-8")
+    strat_path = data_dir / "traditional-chinese_default.txt"
+    strat_path.write_text("subsets {\n  codepoints: 65\n}\n", encoding="utf-8")
+
+    pr_body = tmp_path / "PR_BODY.md"
+    changed_file = tmp_path / "CHANGED.txt"
+
+    def side_effect(url, **kwargs):
+        resp = MagicMock()
+        resp.status_code = 200
+        if "api.github.com" in url:
+            resp.json.return_value = {"sha": "new456"}
+        else:
+            resp.text = "subsets {\n  codepoints: 65\n  codepoints: 66\n}\n"
+        return resp
+
+    with patch("requests.get", side_effect=side_effect):
+        updated = check_google_slices_update(
+            data_dir=data_dir,
+            pr_body_path=pr_body,
+            changed_path=changed_file,
+        )
+
+        assert updated
+        assert changed_file.read_text(encoding="utf-8") == "true"
+        assert pr_body.exists()
+        assert "new456" in pr_body.read_text(encoding="utf-8")
+
+        new_meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        assert new_meta["commit"] == "new456"
+        assert new_meta["totalCodepoints"] == 2

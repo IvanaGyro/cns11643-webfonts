@@ -29,71 +29,13 @@ jobs:
 
       - name: Check for upstream strategy update
         id: check_update
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -e
-          pixi run python -c "
-          import json, requests
-          from pathlib import Path
-          from cns_webfont.google_slices import parse_google_slices
-
-          pinned_path = Path('data/google-fonts/traditional-chinese_default.txt')
-          meta_path = Path('data/google-fonts/metadata.json')
-
-          meta = json.loads(meta_path.read_text(encoding='utf-8'))
-          old_commit = meta.get('commit')
-
-          # Get latest commit on main
-          api_url = 'https://api.github.com/repos/googlefonts/nam-files/commits/main'
-          r = requests.get(api_url, timeout=15)
-          latest_sha = r.json()['sha']
-
-          if latest_sha == old_commit:
-              print('Strategy is up-to-date with latest commit.')
-              with open('CHANGED.txt', 'w') as f:
-                  f.write('false')
-              sys.exit(0)
-
-          # Fetch latest content
-          raw_url = f'https://raw.githubusercontent.com/googlefonts/nam-files/{latest_sha}/slices/traditional-chinese_default.txt'
-          resp = requests.get(raw_url, timeout=15)
-          new_text = resp.text
-
-          temp_new = Path('data/google-fonts/temp_new.txt')
-          temp_new.write_text(new_text, encoding='utf-8')
-
-          old_slices = parse_google_slices(pinned_path)
-          new_slices = parse_google_slices(temp_new)
-          temp_new.unlink()
-
-          old_cps = {cp for s in old_slices for cp in s.codepoints}
-          new_cps = {cp for s in new_slices for cp in s.codepoints}
-
-          added = len(new_cps - old_cps)
-          removed = len(old_cps - new_cps)
-
-          # Update files
-          pinned_path.write_text(new_text, encoding='utf-8')
-          meta['commit'] = latest_sha
-          meta['subsetCount'] = len(new_slices)
-          meta['totalCodepoints'] = len(new_cps)
-          meta_path.write_text(json.dumps(meta, indent=2), encoding='utf-8')
-
-          summary = "\n".join([
-              "### Google Traditional Chinese Slicing Update",
-              f"- **Old Commit**: `{old_commit}`",
-              f"- **New Commit**: `{latest_sha}`",
-              f"- **Subsets**: {len(old_slices)} -> {len(new_slices)}",
-              f"- **Total Codepoints**: {len(old_cps)} -> {len(new_cps)} (+{added}, -{removed})",
-              "",
-          ])
-          with open('PR_BODY.md', 'w') as f:
-              f.write(summary)
-          with open('CHANGED.txt', 'w') as f:
-              f.write('true')
-          "
+          pixi run python -m cns_webfont.cli check-google-slices
 
       - name: Create Pull Request if updated
-        if: ${{ hashFiles('CHANGED.txt') != '' }}
+        if: ${{ hashFiles('PR_BODY.md') != '' }}
         uses: peter-evans/create-pull-request@v6
         with:
           commit-message: "chore(data): update Google Fonts Traditional Chinese slicing strategy"
@@ -102,3 +44,4 @@ jobs:
           branch: chore/google-slices-update
           base: main
           labels: dependencies, automated-pr
+

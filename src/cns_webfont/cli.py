@@ -15,6 +15,7 @@ from cns_webfont.builder import (
     resolve_package_scope,
 )
 from cns_webfont.fonts import inspect_font_file
+from cns_webfont.google_slices import check_google_slices_update
 from cns_webfont.upstream import (
     check_upstream,
     download_file,
@@ -289,6 +290,44 @@ def build_all_cmd(
     )
 
     click.secho("\nAll packages built and validated successfully!", fg="green", bold=True)
+
+
+@main.command("check-google-slices")
+@click.option(
+    "--data-dir",
+    type=click.Path(path_type=Path),
+    default=Path("data/google-fonts"),
+    help="Directory containing pinned strategy and metadata.",
+)
+@click.option(
+    "--pr-body",
+    type=click.Path(path_type=Path),
+    default=Path("PR_BODY.md"),
+    help="Output path for pull request summary markdown.",
+)
+@click.option(
+    "--changed-file",
+    type=click.Path(path_type=Path),
+    default=Path("CHANGED.txt"),
+    help="Output path for boolean change indicator file.",
+)
+def check_google_slices_cmd(data_dir: Path, pr_body: Path, changed_file: Path) -> None:
+    """Check for upstream Google Fonts TC slicing strategy updates."""
+    click.echo("Checking googlefonts/nam-files for Traditional Chinese slicing updates...")
+    try:
+        updated = check_google_slices_update(
+            data_dir=data_dir,
+            pr_body_path=pr_body,
+            changed_path=changed_file,
+        )
+    except Exception as err:
+        click.secho(f"Failed to check Google slicing updates: {err}", fg="red")
+        sys.exit(1)
+
+    if updated:
+        click.secho("\nStrategy update detected and downloaded!", fg="green")
+    else:
+        click.secho("\nGoogle slicing strategy is up-to-date with upstream.", fg="blue")
 
 
 if __name__ == "__main__":

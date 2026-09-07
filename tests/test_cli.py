@@ -164,3 +164,12 @@ def test_cli_check_upstream_github_output(tmp_path: Path, monkeypatch):
     assert "revision=1\n" in content
     assert "needs_build=false\n" in content
     assert "scope=@my-scope\n" in content
+
+
+def test_cli_check_google_slices():
+    """Verify check-google-slices command invokes check_google_slices_update."""
+    with patch("cns_webfont.cli.check_google_slices_update", return_value=False):
+        runner = CliRunner()
+        result = runner.invoke(main, ["check-google-slices"])
+        assert result.exit_code == 0
+        assert "up-to-date" in result.output
