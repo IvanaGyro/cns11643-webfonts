@@ -32,8 +32,74 @@ env:
   NPM_SCOPE: ${{ secrets.NPM_SCOPE || vars.NPM_SCOPE || secrets.NPM_SCPOE || vars.NPM_SCPOE || '@cns11643' }}
 
 jobs:
-  check-and-release:
-    name: Check Upstream, Build and Publish
+  check-upstream:
+    name: Check Upstream vs npm
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      revision: ${{ steps.check.outputs.revision }}
+      needs_build: ${{ steps.check.outputs.needs_build }}
+      scope: ${{ steps.check.outputs.scope }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.3
+        with:
+          cache: true
+
+      - name: Check upstream version vs npm registry
+        id: check
+        env:
+          FORCE_BUILD: ${{ inputs.force_build || false }}
+          RECIPE_REV: ${{ inputs.recipe_revision || 'auto' }}
+        run: |
+          ARGS=""
+          if [ "$FORCE_BUILD" = "true" ]; then
+            ARGS="--force-build"
+          fi
+          pixi run python -m cns_webfont.cli check-upstream \
+            --github-output \
+            --recipe-revision "$RECIPE_REV" \
+            $ARGS
+
+      - name: Report failure as GitHub Issue
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueTitle = `Automated CNS11643 check failed`;
+            const issueBody = [
+              '### Automated Upstream Check Failed',
+              '',
+              `- **Workflow Run**: [View Run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+              `- **Event**: ${context.eventName}`,
+              `- **Timestamp**: ${new Date().toISOString()}`,
+              '',
+              'Please inspect the run logs for details regarding upstream site availability or npm registry connectivity.'
+            ].join('\n');
+
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+            const existing = issues.data.find(i => i.title === issueTitle);
+            if (!existing) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: issueTitle,
+                body: issueBody
+              });
+            }
+
+  build-and-publish:
+    name: Build and Publish
+    needs: check-upstream
+    if: ${{ needs.check-upstream.outputs.needs_build == 'true' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -65,78 +131,6 @@ jobs:
             rm -f ~/.npmrc
           fi
 
-      - name: Check upstream version vs npm registry
-        id: upstream_check
-        env:
-          INPUT_FORCE_BUILD: ${{ inputs.force_build || 'false' }}
-          INPUT_RECIPE_REVISION: ${{ inputs.recipe_revision || 'auto' }}
-        run: |
-          set -e
-          echo "Checking upstream..."
-          pixi run python -c "
-          import os, sys
-          from cns_webfont.builder import resolve_package_scope
-          from cns_webfont.upstream import check_upstream, is_package_published
-
-          scope = resolve_package_scope()
-          print(f'Using npm scope: {scope}')
-
-          info = check_upstream()
-          print(f'UPSTREAM_VERSION={info.version}')
-
-          input_revision = os.environ.get('INPUT_RECIPE_REVISION', 'auto').strip()
-          force_build = os.environ.get('INPUT_FORCE_BUILD', 'false').lower() == 'true'
-
-          if input_revision and input_revision != 'auto':
-              target_revision = int(input_revision)
-              sung_pub = is_package_published(f'{scope}/tw-sung', info.version, recipe_revision=target_revision)
-              kai_pub = is_package_published(f'{scope}/tw-kai', info.version, recipe_revision=target_revision)
-              needs_build = not (sung_pub and kai_pub) or force_build
-          else:
-              sung_pub = is_package_published(f'{scope}/tw-sung', info.version, recipe_revision=0)
-              kai_pub = is_package_published(f'{scope}/tw-kai', info.version, recipe_revision=0)
-              if not (sung_pub and kai_pub):
-                  target_revision = 0
-                  needs_build = True
-              else:
-                  if force_build:
-                      rev = 1
-                      while is_package_published(f'{scope}/tw-sung', info.version, recipe_revision=rev) and \
-                            is_package_published(f'{scope}/tw-kai', info.version, recipe_revision=rev):
-                          rev += 1
-                      target_revision = rev
-                      needs_build = True
-                  else:
-                      target_revision = 0
-                      needs_build = False
-
-          print(f'TARGET_REVISION={target_revision}')
-          print(f'NEEDS_BUILD={needs_build}')
-
-          with open('UPSTREAM_VERSION.txt', 'w') as f:
-              f.write(info.version)
-          with open('RECIPE_REVISION.txt', 'w') as f:
-              f.write(str(target_revision))
-          with open('NEEDS_BUILD.txt', 'w') as f:
-              f.write('true' if needs_build else 'false')
-          with open('SCOPE.txt', 'w') as f:
-              f.write(scope)
-          "
-          UPSTREAM_VER=$(cat UPSTREAM_VERSION.txt)
-          RECIPE_REV=$(cat RECIPE_REVISION.txt)
-          NEEDS_BUILD=$(cat NEEDS_BUILD.txt)
-          RESOLVED_SCOPE=$(cat SCOPE.txt)
-          echo "version=${UPSTREAM_VER}" >> $GITHUB_OUTPUT
-          echo "revision=${RECIPE_REV}" >> $GITHUB_OUTPUT
-          echo "needs_build=${NEEDS_BUILD}" >> $GITHUB_OUTPUT
-          echo "scope=${RESOLVED_SCOPE}" >> $GITHUB_OUTPUT
-
-      - name: Early exit if up-to-date
-        if: ${{ steps.upstream_check.outputs.needs_build == 'false' && (github.event_name != 'workflow_dispatch' || !inputs.force_build) }}
-        run: |
-          echo "All packages are already published and up-to-date with upstream ${{ steps.upstream_check.outputs.version }}.${{ steps.upstream_check.outputs.revision }}.0. Exiting."
-          exit 0
-
       - name: Download official font archives
         run: |
           pixi run python -m cns_webfont.cli download --output-dir sources
@@ -146,9 +140,9 @@ jobs:
           pixi run python -m cns_webfont.cli build-all \
             --sources-dir sources \
             --output-dir packages \
-            --upstream-version ${{ steps.upstream_check.outputs.version }} \
-            --recipe-revision ${{ steps.upstream_check.outputs.revision }} \
-            --scope "${{ steps.upstream_check.outputs.scope }}" \
+            --upstream-version ${{ needs.check-upstream.outputs.version }} \
+            --recipe-revision ${{ needs.check-upstream.outputs.revision }} \
+            --scope "${{ needs.check-upstream.outputs.scope }}" \
             --offline
 
       - name: Validate built packages
@@ -186,8 +180,8 @@ jobs:
           echo "Running post-publish smoke test on jsDelivr..."
           pixi run python -c "
           import time, requests, sys
-          scope = '${{ steps.upstream_check.outputs.scope }}'
-          version = '${{ steps.upstream_check.outputs.version }}.${{ steps.upstream_check.outputs.revision }}.0'
+          scope = '${{ needs.check-upstream.outputs.scope }}'
+          version = '${{ needs.check-upstream.outputs.version }}.${{ needs.check-upstream.outputs.revision }}.0'
           urls = [
               f'https://cdn.jsdelivr.net/npm/{scope}/tw-sung@{version}/tw-sung.css',
               f'https://cdn.jsdelivr.net/npm/{scope}/tw-kai@{version}/tw-kai.css',
@@ -212,11 +206,11 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const issueTitle = `Automated CNS11643 update failed: ${{ steps.upstream_check.outputs.version || 'unknown' }}`;
+            const issueTitle = `Automated CNS11643 update failed: ${{ needs.check-upstream.outputs.version || 'unknown' }}`;
             const issueBody = [
               '### Automated Upstream Release Run Failed',
               '',
-              `- **Upstream Version**: \`${{ steps.upstream_check.outputs.version || 'unknown' }}\``,
+              `- **Upstream Version**: \`${{ needs.check-upstream.outputs.version || 'unknown' }}\``,
               `- **Workflow Run**: [View Run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
               `- **Event**: ${context.eventName}`,
               `- **Timestamp**: ${new Date().toISOString()}`,
@@ -238,3 +232,4 @@ jobs:
                 body: issueBody
               });
             }
+

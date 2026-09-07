@@ -9,10 +9,12 @@ from cns_webfont.upstream import (
     UpstreamError,
     check_upstream,
     download_file,
+    get_published_revisions,
     is_package_published,
     make_package_version,
     parse_csv_file_list,
     parse_release_txt,
+    resolve_target_release,
 )
 
 SAMPLE_RELEASE_TXT = """============================================================
@@ -172,3 +174,76 @@ def test_is_package_published():
         assert is_package_published(pkg_name, "20260805", 0)
         assert not is_package_published(pkg_name, "20260805", 1)
         assert not is_package_published(pkg_name, "20261110", 0)
+
+
+def test_get_published_revisions():
+    """Verify extracting published revisions from npm versions map."""
+    pkg_name = "@test-scope/tw-sung"
+
+    with patch("requests.get") as mock_get:
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "versions": {
+                "20260805.0.0": {},
+                "20260805.1.0": {},
+                "20260805.3.0": {},
+                "20251201.0.0": {},
+            }
+        }
+        mock_get.return_value = mock_resp
+
+        assert get_published_revisions(pkg_name, "20260805") == [0, 1, 3]
+        assert get_published_revisions(pkg_name, "20251201") == [0]
+        assert get_published_revisions(pkg_name, "20260101") == []
+
+
+def test_resolve_target_release_auto_unreleased():
+    """When version is not published on npm, auto targets rev 0 with needs_build=True."""
+    with patch("cns_webfont.upstream.get_published_revisions", return_value=[]):
+        target_rev, needs_build = resolve_target_release("@test", "20260805", "auto")
+        assert target_rev == 0
+        assert needs_build is True
+
+
+def test_resolve_target_release_auto_already_published():
+    """When version is already published, auto-release skips build."""
+    with patch("cns_webfont.upstream.get_published_revisions", return_value=[0, 1]):
+        target_rev, needs_build = resolve_target_release(
+            "@test", "20260805", "auto", force_build=False
+        )
+        assert target_rev == 1
+        assert needs_build is False
+
+
+def test_resolve_target_release_auto_force_build():
+    """When force_build is True and versions are published, auto increments revision."""
+    with patch("cns_webfont.upstream.get_published_revisions", return_value=[0, 1]):
+        target_rev, needs_build = resolve_target_release(
+            "@test", "20260805", "auto", force_build=True
+        )
+        assert target_rev == 2
+        assert needs_build is True
+
+
+def test_resolve_target_release_explicit_revision():
+    """Explicit revision respects published state unless force_build is True."""
+    with patch("cns_webfont.upstream.get_published_revisions", return_value=[0, 1]):
+        # Revision 1 is published -> skip build
+        target_rev, needs_build = resolve_target_release(
+            "@test", "20260805", "1", force_build=False
+        )
+        assert target_rev == 1
+        assert needs_build is False
+
+        # Revision 1 is published, but force_build=True -> build anyway
+        target_rev, needs_build = resolve_target_release("@test", "20260805", "1", force_build=True)
+        assert target_rev == 1
+        assert needs_build is True
+
+        # Revision 2 is unreleased -> build
+        target_rev, needs_build = resolve_target_release(
+            "@test", "20260805", "2", force_build=False
+        )
+        assert target_rev == 2
+        assert needs_build is True

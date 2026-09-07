@@ -7,6 +7,7 @@ import hashlib
 import io
 import logging
 import re
+import time
 import warnings
 from pathlib import Path
 from typing import Any
@@ -203,18 +204,28 @@ def make_package_version(upstream_version: str, recipe_revision: int = 0) -> str
 def check_npm_package_metadata(
     package_name: str,
     registry_url: str = "https://registry.npmjs.org",
+    timeout: int = 15,
 ) -> dict[str, Any] | None:
-    """Fetch published package metadata from npm registry."""
+    """Fetch published package metadata from npm registry using lightweight install-v1 manifest."""
     url = f"{registry_url.rstrip('/')}/{package_name}"
-    try:
-        res = requests.get(url, timeout=10)
-        if res.status_code == 404:
+    headers = {
+        "Accept": "application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*",
+        "User-Agent": "cns-webfont-builder",
+    }
+    for attempt in range(3):
+        try:
+            res = requests.get(url, headers=headers, timeout=timeout)
+            if res.status_code == 404:
+                return None
+            res.raise_for_status()
+            return res.json()
+        except Exception as err:
+            if attempt < 2:
+                time.sleep(2)
+                continue
+            logger.warning("Failed to check npm registry for %s: %s", package_name, err)
             return None
-        res.raise_for_status()
-        return res.json()
-    except Exception as err:
-        logger.warning("Failed to check npm registry for %s: %s", package_name, err)
-        return None
+    return None
 
 
 def is_package_published(
@@ -242,3 +253,69 @@ def is_package_published(
         return True
 
     return True
+
+
+def get_published_revisions(
+    package_name: str,
+    upstream_version: str,
+    registry_url: str = "https://registry.npmjs.org",
+) -> list[int]:
+    """Return a sorted list of published recipe revisions for this upstream version."""
+    metadata = check_npm_package_metadata(package_name, registry_url=registry_url)
+    if not metadata:
+        return []
+
+    prefix = f"{upstream_version}."
+    revisions: list[int] = []
+    for v in metadata.get("versions", {}):
+        if v.startswith(prefix):
+            parts = v.split(".")
+            if len(parts) >= 2 and parts[1].isdigit():
+                revisions.append(int(parts[1]))
+    return sorted(set(revisions))
+
+
+def resolve_target_release(
+    scope: str,
+    upstream_version: str,
+    recipe_revision: str | int | None = "auto",
+    force_build: bool = False,
+    registry_url: str = "https://registry.npmjs.org",
+) -> tuple[int, bool]:
+    """Resolve target recipe revision and determine whether a build is required.
+
+    Args:
+        scope: npm scope (e.g. '@cns11643' or '@ivanagyro').
+        upstream_version: 8-digit upstream version string (e.g. '20260805').
+        recipe_revision: Explicit revision integer or 'auto'.
+        force_build: If True, always build (auto increments to next revision if published).
+        registry_url: npm registry endpoint.
+
+    Returns:
+        tuple of (target_revision: int, needs_build: bool).
+    """
+    clean_scope = scope.strip().rstrip("/")
+    sung_pkg = f"{clean_scope}/tw-sung"
+    kai_pkg = f"{clean_scope}/tw-kai"
+
+    sung_revs = set(get_published_revisions(sung_pkg, upstream_version, registry_url=registry_url))
+    kai_revs = set(get_published_revisions(kai_pkg, upstream_version, registry_url=registry_url))
+    common_published = sung_revs.intersection(kai_revs)
+
+    if recipe_revision is not None and str(recipe_revision).strip().lower() != "auto":
+        target = int(recipe_revision)
+        is_pub = target in common_published
+        needs_build = (not is_pub) or force_build
+        return target, needs_build
+
+    # Auto resolution
+    if not common_published:
+        # Neither or incomplete published -> start from revision 0
+        return 0, True
+
+    # Both packages already have published revisions
+    max_pub = max(common_published)
+    if force_build:
+        return max_pub + 1, True
+    else:
+        return max_pub, False

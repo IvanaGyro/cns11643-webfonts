@@ -134,3 +134,33 @@ def test_cli_check_upstream_with_npm_scpoe_env(monkeypatch):
             assert result.exit_code == 0
             assert "@test-user" in result.output
             assert "@test-user/tw-sung" in result.output
+
+
+def test_cli_check_upstream_github_output(tmp_path: Path, monkeypatch):
+    """Verify check-upstream writes expected key-values to GITHUB_OUTPUT."""
+    gh_output = tmp_path / "github_output.txt"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(gh_output))
+
+    mock_info = UpstreamInfo(
+        version="20260805",
+        release_date="2026-08-05",
+        sung_url="http://example.com/sung.zip",
+        kai_url="http://example.com/kai.zip",
+        csv_url="http://example.com/list.csv",
+        release_url="http://example.com/rel.txt",
+    )
+    with patch("cns_webfont.cli.check_upstream", return_value=mock_info):
+        with patch("cns_webfont.cli.resolve_target_release", return_value=(1, False)):
+            runner = CliRunner()
+            result = runner.invoke(
+                main,
+                ["check-upstream", "--github-output", "--scope", "@my-scope"],
+            )
+            assert result.exit_code == 0
+
+    assert gh_output.exists()
+    content = gh_output.read_text(encoding="utf-8")
+    assert "version=20260805\n" in content
+    assert "revision=1\n" in content
+    assert "needs_build=false\n" in content
+    assert "scope=@my-scope\n" in content

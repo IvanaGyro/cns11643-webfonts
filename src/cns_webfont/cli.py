@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -17,7 +18,9 @@ from cns_webfont.fonts import inspect_font_file
 from cns_webfont.upstream import (
     check_upstream,
     download_file,
+    get_published_revisions,
     is_package_published,
+    resolve_target_release,
 )
 from cns_webfont.validator import validate_package
 
@@ -48,7 +51,27 @@ def main(verbose: bool) -> None:
     default=None,
     help="npm scope to check against (defaults to env NPM_SCPOE / NPM_SCOPE or @cns11643).",
 )
-def check_upstream_cmd(scope: str | None) -> None:
+@click.option(
+    "--recipe-revision",
+    default="auto",
+    help="Target recipe revision (e.g. 0, 1, or auto).",
+)
+@click.option(
+    "--force-build",
+    is_flag=True,
+    help="Force build even if version is already published.",
+)
+@click.option(
+    "--github-output",
+    is_flag=True,
+    help="Write version, revision, needs_build, and scope to $GITHUB_OUTPUT if set.",
+)
+def check_upstream_cmd(
+    scope: str | None,
+    recipe_revision: str,
+    force_build: bool,
+    github_output: bool,
+) -> None:
     """Check official upstream for updates and compare with published npm versions."""
     resolved_scope = resolve_package_scope(scope)
     click.echo(f"Checking official CNS11643 upstream (npm scope: {resolved_scope})...")
@@ -69,10 +92,36 @@ def check_upstream_cmd(scope: str | None) -> None:
     click.echo(f"  {sung_pkg}: {'PUBLISHED' if sung_pub else 'UPDATE AVAILABLE'}")
     click.echo(f"  {kai_pkg}:  {'PUBLISHED' if kai_pub else 'UPDATE AVAILABLE'}")
 
-    if not sung_pub or not kai_pub:
-        click.secho("\nNew upstream release available for build and publish.", fg="green")
+    sung_revs = get_published_revisions(sung_pkg, info.version)
+    kai_revs = get_published_revisions(kai_pkg, info.version)
+
+    click.echo(f"  {sung_pkg} published revisions: {sung_revs or 'None'}")
+    click.echo(f"  {kai_pkg}  published revisions: {kai_revs or 'None'}")
+
+    target_rev, needs_build = resolve_target_release(
+        scope=resolved_scope,
+        upstream_version=info.version,
+        recipe_revision=recipe_revision,
+        force_build=force_build,
+    )
+
+    click.echo(f"  Resolved target recipe revision: {target_rev}")
+    if needs_build:
+        click.secho(f"\nBuild required for {info.version}.{target_rev}.0.", fg="green")
     else:
-        click.secho("\nPackages are already up-to-date with upstream.", fg="blue")
+        click.secho(
+            f"\nPackages are already up-to-date with upstream ({info.version}.{target_rev}.0). "
+            f"Skipping build.",
+            fg="blue",
+        )
+
+    if github_output and "GITHUB_OUTPUT" in os.environ:
+        output_file = os.environ["GITHUB_OUTPUT"]
+        with open(output_file, "a", encoding="utf-8") as f:
+            f.write(f"version={info.version}\n")
+            f.write(f"revision={target_rev}\n")
+            f.write(f"needs_build={'true' if needs_build else 'false'}\n")
+            f.write(f"scope={resolved_scope}\n")
 
 
 @main.command("download")
