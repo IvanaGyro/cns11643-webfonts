@@ -44,4 +44,6 @@ jobs:
           branch: chore/google-slices-update
           base: main
           labels: dependencies, automated-pr
+          add-paths: |
+            data/google-fonts/**
 

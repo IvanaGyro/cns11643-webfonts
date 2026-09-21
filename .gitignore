@@ -8,6 +8,8 @@ __pycache__/
 
 # Scratch files
 .run_temp.py
+CHANGED.txt
+PR_BODY.md
 
 # Build and distribution artifacts
 build/
